@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "forms": [
+    { "form": "Egg",   "idle": { "folder": "egg_Idle",   "fps": 12 },
+      "emotes": [ { "id": "egg_drink", "folder": "egg_emo_drink", "fps": 24 },
+                  { "id": "egg_bath",  "folder": "egg_emo_bath",  "fps": 24 } ] },
+    { "form": "Small", "idle": { "folder": "small_idle", "fps": 12 },
+      "emotes": [ { "id": "small_heart",    "folder": "small_heart",    "fps": 24 },
+                  { "id": "small_armcross", "folder": "small_armcross", "fps": 24 } ] },
+    { "form": "Big",   "idle": { "folder": "big_Idle",   "fps": 12 },
+      "emotes": [ { "id": "big_laugh", "folder": "big_emo_laugh", "fps": 24 },
+                  { "id": "big_fall",  "folder": "big_emo_fall",  "fps": 24 } ] }
+  ]
+}
