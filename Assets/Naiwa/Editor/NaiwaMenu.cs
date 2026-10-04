@@ -1,11 +1,12 @@
 using System.IO;
 using Naiwa.Core;
 using Naiwa.Fx;
-using Naiwa.Hud;
 using Naiwa.Pet;
+using Naiwa.UI;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEngine.Rendering;
 
 namespace Naiwa.EditorTools
@@ -18,13 +19,13 @@ namespace Naiwa.EditorTools
         {
             NaiwaEditorConfig.Invalidate();
             var cfg = NaiwaEditorConfig.Config;
-            int size = cfg.window.WindowSizePx;
+            int w = cfg.window.WindowWidthPx, h = cfg.window.WindowHeightPx;
 
             PlayerSettings.companyName = "Naiwa";
             PlayerSettings.productName = "NaiwaPet";
             PlayerSettings.fullScreenMode = FullScreenMode.Windowed;
-            PlayerSettings.defaultScreenWidth = size;
-            PlayerSettings.defaultScreenHeight = size;
+            PlayerSettings.defaultScreenWidth = w;
+            PlayerSettings.defaultScreenHeight = h;
             PlayerSettings.defaultIsNativeResolution = false;
             PlayerSettings.resizableWindow = true;
             PlayerSettings.runInBackground = true;
@@ -46,7 +47,7 @@ namespace Naiwa.EditorTools
             QualitySettings.SetQualityLevel(current, false);
 
             AssetDatabase.SaveAssets();
-            Debug.Log($"[Naiwa] Player Settings 已设置：Windowed {size}×{size}、D3D11、关闭 DXGI flip model、Run In Background、MSAA 关闭");
+            Debug.Log($"[Naiwa] Player Settings 已设置：Windowed {w}×{h}、D3D11、关闭 DXGI flip model、Run In Background、MSAA 关闭");
         }
 
         [MenuItem("Naiwa/搭建主场景", priority = 31)]
@@ -57,11 +58,12 @@ namespace Naiwa.EditorTools
             NaiwaEditorConfig.Invalidate();
             var cfg = NaiwaEditorConfig.Config;
             var smokeMaterial = EnsureMaterial(NaiwaEditorConfig.SmokeMaterialPath, "Naiwa/ParticlePremultiplied");
-            var textMaterial = EnsureMaterial(NaiwaEditorConfig.TextMaterialPath, "Naiwa/TextPremultiplied");
+            var uiMaterial = EnsureMaterial(NaiwaEditorConfig.UiMaterialPath, "Naiwa/UIPremultiplied");
+            var silhouetteMaterial = EnsureMaterial(NaiwaEditorConfig.SilhouetteMaterialPath, "Naiwa/UISilhouettePremultiplied");
 
             var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
 
-            // 正交相机（V.3.8）：1 世界单位 = sizePx/6 像素；相机中心对准画布中心
+            // 正交相机：1 世界单位 = sizePx/6 像素；窗口为固定大画布（v1.0 §7.3），宠物在屏幕上的位置与 v0.1 一致
             var camGo = new GameObject("Main Camera") { tag = "MainCamera" };
             var cam = camGo.AddComponent<Camera>();
             cam.orthographic = true;
@@ -72,7 +74,7 @@ namespace Naiwa.EditorTools
             cam.allowMSAA = false;
             cam.nearClipPlane = 0.3f;
             cam.farClipPlane = 100f;
-            camGo.transform.position = new Vector3(0f, PetGeometry.CanvasCenterY, -10f);
+            camGo.transform.position = new Vector3(0f, cfg.window.CameraY, -10f);
 
             var root = new GameObject("NaiwaPet");
             var bootstrap = root.AddComponent<GameBootstrap>();
@@ -84,23 +86,17 @@ namespace Naiwa.EditorTools
             animator.layerB = CreateLayer(petGo.transform, "LayerB", 1);
             var squash = petGo.AddComponent<SquashStretch>();
 
-            // 计数框：脚下方，不参与点击判定
-            var counterGo = new GameObject("CounterHud");
-            counterGo.transform.SetParent(root.transform, false);
-            var counter = counterGo.AddComponent<GrowthCounterView>();
-            var boxGo = new GameObject("Box");
-            boxGo.transform.SetParent(counterGo.transform, false);
-            counter.box = boxGo.AddComponent<SpriteRenderer>();
-            counter.box.sortingOrder = cfg.counter.sortingOrder;
-            var textGo = new GameObject("Text");
-            textGo.transform.SetParent(counterGo.transform, false);
-            counter.textFilter = textGo.AddComponent<MeshFilter>();
-            counter.textRenderer = textGo.AddComponent<MeshRenderer>();
-            counter.textRenderer.sharedMaterial = textMaterial;
-            counter.textRenderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
-            counter.textRenderer.receiveShadows = false;
-            counter.textRenderer.sortingOrder = cfg.counter.sortingOrder + 1;
-            counter.textMaterial = textMaterial;
+            // UI：Canvas 由 HudController 在运行时搭建；EventSystem 用钩子驱动的输入模块（§7.2）
+            var hudGo = new GameObject("Hud");
+            hudGo.layer = 5;
+            hudGo.AddComponent<RectTransform>();
+            var hud = hudGo.AddComponent<HudController>();
+            hud.uiMaterial = uiMaterial;
+            hud.silhouetteMaterial = silhouetteMaterial;
+
+            var esGo = new GameObject("EventSystem");
+            esGo.AddComponent<EventSystem>();
+            var uiInput = esGo.AddComponent<HookUIInputModule>();
 
             var hitGo = new GameObject("HitShape");
             hitGo.transform.SetParent(root.transform, false);
@@ -125,7 +121,8 @@ namespace Naiwa.EditorTools
             bootstrap.hitTester = hit;
             bootstrap.evolutionFx = fx;
             bootstrap.squash = squash;
-            bootstrap.counterView = counter;
+            bootstrap.hud = hud;
+            bootstrap.uiInput = uiInput;
 
             Directory.CreateDirectory(NaiwaEditorConfig.ToFullPath(Path.GetDirectoryName(NaiwaEditorConfig.MainScenePath)));
             EditorSceneManager.SaveScene(scene, NaiwaEditorConfig.MainScenePath);

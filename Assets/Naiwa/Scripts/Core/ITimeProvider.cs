@@ -13,6 +13,9 @@ namespace Naiwa.Core
         long MonotonicMs { get; }
 
         DateTime LocalNow { get; }
+
+        /// <summary>真实世界 UTC 时间（抽奖冷却按它计，关掉程序也在走）。</summary>
+        DateTime UtcNow { get; }
     }
 
     public sealed class SystemTimeProvider : ITimeProvider
@@ -22,5 +25,6 @@ namespace Naiwa.Core
         public double RealtimeSeconds => _stopwatch.Elapsed.TotalSeconds;
         public long MonotonicMs => _stopwatch.ElapsedMilliseconds;
         public DateTime LocalNow => DateTime.Now;
+        public DateTime UtcNow => DateTime.UtcNow;
     }
 }

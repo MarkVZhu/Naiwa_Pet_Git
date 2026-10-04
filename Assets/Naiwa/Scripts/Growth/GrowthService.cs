@@ -3,45 +3,54 @@ using System;
 namespace Naiwa.Growth
 {
     /// <summary>
-    /// v0.1 裁剪版（§5.2）：只保留阈值判断和形态升级。里程碑/随机掉落/周重置不做。
-    /// Form 是"已完成进化"的形态；成长值达标但还没播完进化时，HasPendingEvolution 为 true。
-    /// 一次跨过两个阈值会依次请求两次进化（Egg→Small，CommitEvolution 后再请求 Small→Big）。
+    /// 成长值与已解锁最高形态（v1.0 §1.4、§4.5）。
+    /// HighestForm 是"已完成解锁"的形态；成长值跨过阈值但还没播完进化时，HasPendingUnlock 为 true。
+    /// 一次跨过两个阈值会依次解锁（CommitUnlock 每次只升一级）。成长值永不消耗，形态只升不降（调试除外）。
     /// </summary>
     public sealed class GrowthService
     {
-        readonly int _eggToSmall;
-        readonly int _smallToBig;
+        readonly long _eggToSmall;
+        readonly long _smallToBig;
 
-        public int Growth { get; private set; }
-        public FormId Form { get; private set; }
+        public long Growth { get; private set; }
+        public FormId HighestForm { get; private set; }
 
-        /// <summary>参数为请求进化到的目标形态（总是 Form 的下一阶段）。</summary>
-        public event Action<FormId> EvolutionRequested;
-        public event Action<int> GrowthChanged;
+        public event Action<long> GrowthChanged;
+        /// <summary>参数为新的 HighestForm。</summary>
+        public event Action<FormId> HighestFormChanged;
 
-        public GrowthService(int eggToSmall, int smallToBig, int growth = 0, FormId form = FormId.Egg)
+        public GrowthService(long eggToSmall, long smallToBig, long growth = 0, FormId highestForm = FormId.Egg)
         {
             _eggToSmall = eggToSmall;
             _smallToBig = smallToBig;
             Growth = Math.Max(0, growth);
-            Form = Enum.IsDefined(typeof(FormId), form) ? form : FormId.Egg;
+            HighestForm = Enum.IsDefined(typeof(FormId), highestForm) ? highestForm : FormId.Egg;
         }
 
-        public FormId TargetForm => FormForGrowth(Growth);
+        /// <summary>按成长值应达到的形态（不低于 HighestForm）。</summary>
+        public FormId TargetForm
+        {
+            get
+            {
+                var f = FormForGrowth(Growth);
+                return f > HighestForm ? f : HighestForm;
+            }
+        }
 
-        public bool HasPendingEvolution => TargetForm > Form;
+        public bool HasPendingUnlock => FormForGrowth(Growth) > HighestForm;
 
-        /// <summary>下一个进化节点；大奶蛙返回 null。</summary>
-        public int? NextThreshold => Form.HasNext() ? ThresholdOf(Form.Next()) : (int?)null;
+        /// <summary>下一个进化节点；大奶蛙返回 null。按 HighestForm 计算。</summary>
+        public long? NextThreshold => HighestForm.HasNext() ? ThresholdOf(HighestForm.Next()) : (long?)null;
 
-        public FormId FormForGrowth(int growth)
+        public FormId FormForGrowth(long growth)
         {
             if (growth >= _smallToBig) return FormId.Big;
             if (growth >= _eggToSmall) return FormId.Small;
             return FormId.Egg;
         }
 
-        public int ThresholdOf(FormId form)
+        /// <summary>解锁该形态所需的成长值（奶蛋为 0）。</summary>
+        public long ThresholdOf(FormId form)
         {
             switch (form)
             {
@@ -51,41 +60,48 @@ namespace Naiwa.Growth
             }
         }
 
-        public void Add(int n)
+        public void Add(long n)
         {
             if (n <= 0) return;
-            bool hadPending = HasPendingEvolution;
-            Growth = (int)Math.Min((long)Growth + n, int.MaxValue);
+            Growth = Growth > long.MaxValue - n ? long.MaxValue : Growth + n;
             GrowthChanged?.Invoke(Growth);
-            if (!hadPending && HasPendingEvolution)
-                EvolutionRequested?.Invoke(Form.Next());
         }
 
-        /// <summary>进化过场播完后调用：形态 +1；如果还有待进化，立刻请求下一次。</summary>
-        public void CommitEvolution()
+        /// <summary>进化过场到换形态那一刻调用：HighestForm +1。</summary>
+        public void CommitUnlock()
         {
-            if (!HasPendingEvolution) return;
-            Form = Form.Next();
-            if (HasPendingEvolution)
-                EvolutionRequested?.Invoke(Form.Next());
+            if (!HasPendingUnlock) return;
+            HighestForm = HighestForm.Next();
+            HighestFormChanged?.Invoke(HighestForm);
         }
 
-        /// <summary>调试：直接设成长值（不降级形态）。</summary>
-        public void SetGrowth(int growth)
+        /// <summary>调试：强制设置最高形态与成长值（唯一允许降级的入口）。</summary>
+        public void ForceState(FormId highest, long growth)
         {
-            bool hadPending = HasPendingEvolution;
             Growth = Math.Max(0, growth);
+            bool changed = HighestForm != highest;
+            HighestForm = highest;
             GrowthChanged?.Invoke(Growth);
-            if (!hadPending && HasPendingEvolution)
-                EvolutionRequested?.Invoke(Form.Next());
+            if (changed) HighestFormChanged?.Invoke(HighestForm);
+        }
+    }
+
+    /// <summary>成长进度条比例（v1.0 §4.3），按 HighestForm 计算，与当前显示形态无关。</summary>
+    public static class GrowthProgress
+    {
+        public static float Ratio(long growth, FormId highestForm, long eggToSmall, long smallToBig)
+        {
+            if (highestForm >= FormId.Big) return 1f;
+            long start = highestForm == FormId.Small ? eggToSmall : 0;
+            long end = highestForm == FormId.Small ? smallToBig : eggToSmall;
+            if (end <= start) return 1f;
+            double r = (growth - start) / (double)(end - start);
+            return (float)Math.Max(0.0, Math.Min(1.0, r));
         }
 
-        /// <summary>调试：强制设置形态与成长值（唯一允许降级的入口）。</summary>
-        public void ForceState(FormId form, int growth)
-        {
-            Form = form;
-            Growth = Math.Max(0, growth);
-            GrowthChanged?.Invoke(Growth);
-        }
+        public static float Ratio(GrowthService g) =>
+            Ratio(g.Growth, g.HighestForm, g.ThresholdOf(FormId.Small), g.ThresholdOf(FormId.Big));
+
+        public static bool IsMax(FormId highestForm) => highestForm >= FormId.Big;
     }
 }

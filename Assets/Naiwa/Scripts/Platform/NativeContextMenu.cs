@@ -11,11 +11,15 @@ namespace Naiwa.Platform
         public bool Enabled;
         public bool Checked;
         public bool IsSeparator;
+        /// <summary>非空时为子菜单。</summary>
+        public List<ContextMenuItem> Children;
 
         public static ContextMenuItem Separator() => new ContextMenuItem { IsSeparator = true };
         public static ContextMenuItem Label(string text) => new ContextMenuItem { Text = text, Enabled = false };
-        public static ContextMenuItem Command(int id, string text, bool isChecked = false) =>
-            new ContextMenuItem { Id = id, Text = text, Enabled = true, Checked = isChecked };
+        public static ContextMenuItem Command(int id, string text, bool isChecked = false, bool enabled = true) =>
+            new ContextMenuItem { Id = id, Text = text, Enabled = enabled, Checked = isChecked };
+        public static ContextMenuItem SubMenu(string text, List<ContextMenuItem> children, bool enabled = true) =>
+            new ContextMenuItem { Text = text, Enabled = enabled, Children = children };
     }
 
     /// <summary>
@@ -49,7 +53,7 @@ namespace Naiwa.Platform
                 return;
             }
 #endif
-            _editorItems = items;
+            _editorItems = Flatten(items);
             _editorCallback = onChosen;
             Vector3 m = UnityEngine.Input.mousePosition;
             _editorGuiPos = new Vector2(m.x, Screen.height - m.y);
@@ -61,25 +65,64 @@ namespace Naiwa.Platform
             _editorCallback = null;
         }
 
+        /// <summary>Editor 兜底菜单不支持子菜单：把子项缩进展开。</summary>
+        static List<ContextMenuItem> Flatten(List<ContextMenuItem> items)
+        {
+            var flat = new List<ContextMenuItem>();
+            foreach (var it in items)
+            {
+                if (it.Children == null) { flat.Add(it); continue; }
+                flat.Add(ContextMenuItem.Label(it.Text + " ▶"));
+                foreach (var c in it.Children)
+                {
+                    var child = c;
+                    child.Text = "      " + child.Text;
+                    child.Enabled &= it.Enabled;
+                    flat.Add(child);
+                }
+            }
+            return flat;
+        }
+
 #if UNITY_STANDALONE_WIN && !UNITY_EDITOR
+        const uint MF_POPUP = 0x00000010;
+
+        static void AppendItems(IntPtr menu, List<ContextMenuItem> items, List<IntPtr> created)
+        {
+            foreach (var item in items)
+            {
+                if (item.IsSeparator)
+                {
+                    Win32Native.AppendMenu(menu, Win32Native.MF_SEPARATOR, UIntPtr.Zero, null);
+                    continue;
+                }
+
+                uint flags = Win32Native.MF_STRING;
+                if (!item.Enabled) flags |= Win32Native.MF_GRAYED;
+                if (item.Checked) flags |= Win32Native.MF_CHECKED;
+
+                if (item.Children != null)
+                {
+                    IntPtr sub = Win32Native.CreatePopupMenu();
+                    if (sub == IntPtr.Zero) continue;
+                    created.Add(sub);
+                    AppendItems(sub, item.Children, created);
+                    Win32Native.AppendMenu(menu, flags | MF_POPUP, new UIntPtr((ulong)sub.ToInt64()), item.Text ?? string.Empty);
+                    continue;
+                }
+
+                Win32Native.AppendMenu(menu, flags, new UIntPtr((uint)Math.Max(0, item.Id)), item.Text ?? string.Empty);
+            }
+        }
+
         int ShowNative(List<ContextMenuItem> items)
         {
             IntPtr menu = Win32Native.CreatePopupMenu();
             if (menu == IntPtr.Zero) return 0;
+            var created = new List<IntPtr>();
             try
             {
-                foreach (var item in items)
-                {
-                    if (item.IsSeparator)
-                    {
-                        Win32Native.AppendMenu(menu, Win32Native.MF_SEPARATOR, UIntPtr.Zero, null);
-                        continue;
-                    }
-                    uint flags = Win32Native.MF_STRING;
-                    if (!item.Enabled) flags |= Win32Native.MF_GRAYED;
-                    if (item.Checked) flags |= Win32Native.MF_CHECKED;
-                    Win32Native.AppendMenu(menu, flags, new UIntPtr((uint)Math.Max(0, item.Id)), item.Text ?? string.Empty);
-                }
+                AppendItems(menu, items, created);
 
                 var cursor = _window.GetCursorDesktop();
                 IntPtr hwnd = _window.Handle;

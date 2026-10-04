@@ -44,6 +44,10 @@ namespace Naiwa.Input
                     into.Add(new RawInputEvent { Kind = RawKind.MouseUp, Button = btn, TimestampMs = now, ScreenX = sx, ScreenY = sy });
             }
 
+            float wheel = UnityEngine.Input.mouseScrollDelta.y;
+            if (mouseInView && Mathf.Abs(wheel) > 0.01f)
+                into.Add(new RawInputEvent { Kind = RawKind.MouseWheel, TimestampMs = now, ScreenX = sx, ScreenY = sy, WheelDelta = Mathf.RoundToInt(wheel * 120f) });
+
             if (!_simulateKeyboard) return;
             bool scanUps = AnyKeyUp();
             if (!UnityEngine.Input.anyKeyDown && !scanUps) return;

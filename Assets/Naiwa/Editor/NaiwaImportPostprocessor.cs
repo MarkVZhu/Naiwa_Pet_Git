@@ -18,7 +18,7 @@ namespace Naiwa.EditorTools
         /// </summary>
         public const bool UseMipmaps = false;
 
-        public override uint GetVersion() => 2;
+        public override uint GetVersion() => 3;
 
         void OnPreprocessTexture()
         {
@@ -30,13 +30,14 @@ namespace Naiwa.EditorTools
         {
             importer.textureType = TextureImporterType.Sprite;
             importer.spriteImportMode = SpriteImportMode.Single;
+            var (ppu, pivot) = ClipAlignment.For(importer.assetPath);
 
             var s = new TextureImporterSettings();
             importer.ReadTextureSettings(s);
             s.spriteMode = (int)SpriteImportMode.Single;
             s.spriteAlignment = (int)SpriteAlignment.Custom;
-            s.spritePivot = PetGeometry.Pivot;
-            s.spritePixelsPerUnit = PetGeometry.PixelsPerUnit;
+            s.spritePivot = pivot;
+            s.spritePixelsPerUnit = ppu;
             s.spriteMeshType = SpriteMeshType.FullRect;
             s.spriteExtrude = 1;
             s.spriteGenerateFallbackPhysicsShape = true;
@@ -66,8 +67,9 @@ namespace Naiwa.EditorTools
         {
             if (importer.textureType != TextureImporterType.Sprite) return "Texture Type 不是 Sprite";
             if (importer.spriteImportMode != SpriteImportMode.Single) return "Sprite Mode 不是 Single";
-            if (!Mathf.Approximately(importer.spritePixelsPerUnit, PetGeometry.PixelsPerUnit)) return $"PPU={importer.spritePixelsPerUnit}";
-            if (Vector2.Distance(importer.spritePivot, PetGeometry.Pivot) > 0.001f) return $"Pivot={importer.spritePivot}";
+            var (ppu, pivot) = ClipAlignment.For(importer.assetPath);
+            if (Mathf.Abs(importer.spritePixelsPerUnit - ppu) > 0.01f) return $"PPU={importer.spritePixelsPerUnit}（应为 {ppu}）";
+            if (Vector2.Distance(importer.spritePivot, pivot) > 0.001f) return $"Pivot={importer.spritePivot}（应为 {pivot}）";
             if (importer.mipmapEnabled != UseMipmaps) return UseMipmaps ? "Mipmap 未开启" : "Mipmap 应关闭";
             if (!importer.alphaIsTransparency) return "Alpha Is Transparency 未开启";
             var ps = importer.GetPlatformTextureSettings(StandalonePlatform);

@@ -1,91 +1,71 @@
-using System.Collections.Generic;
 using Naiwa.Growth;
 using NUnit.Framework;
 
 namespace Naiwa.Tests
 {
+    /// <summary>成长值与形态解锁（v1.0 阈值 5,000 / 12,000）。</summary>
     public class GrowthServiceLiteTests
     {
-        static GrowthService Create(List<FormId> requests)
+        static GrowthService Create() => new GrowthService(5000, 12000);
+
+        [Test]
+        public void Growth4999_StaysEgg()
         {
-            var g = new GrowthService(3000, 25000);
-            g.EvolutionRequested += f => requests.Add(f);
-            return g;
+            var g = Create();
+            g.Add(4999);
+            Assert.AreEqual(FormId.Egg, g.HighestForm);
+            Assert.IsFalse(g.HasPendingUnlock);
         }
 
         [Test]
-        public void Growth2999_StaysEgg()
+        public void Growth5000_PendingSmall_CommitUnlocks()
         {
-            var req = new List<FormId>();
-            var g = Create(req);
-            g.Add(2999);
-            Assert.AreEqual(FormId.Egg, g.Form);
-            Assert.AreEqual(FormId.Egg, g.TargetForm);
-            Assert.IsFalse(g.HasPendingEvolution);
-            Assert.IsEmpty(req);
+            var g = Create();
+            g.Add(5000);
+            Assert.IsTrue(g.HasPendingUnlock);
+            Assert.AreEqual(FormId.Egg, g.HighestForm, "动画换形态之前不提交");
+            g.CommitUnlock();
+            Assert.AreEqual(FormId.Small, g.HighestForm);
+            Assert.IsFalse(g.HasPendingUnlock);
         }
 
         [Test]
-        public void Growth3000_RequestsSmall()
+        public void Add30000FromZero_UnlocksOneStepAtATime()
         {
-            var req = new List<FormId>();
-            var g = Create(req);
-            g.Add(2999);
-            g.Add(1);
-            CollectionAssert.AreEqual(new[] { FormId.Small }, req);
-            Assert.IsTrue(g.HasPendingEvolution);
-
-            g.CommitEvolution();
-            Assert.AreEqual(FormId.Small, g.Form);
-            Assert.IsFalse(g.HasPendingEvolution);
-            CollectionAssert.AreEqual(new[] { FormId.Small }, req);
-        }
-
-        [Test]
-        public void Add30000FromZero_RequestsSmallThenBig()
-        {
-            var req = new List<FormId>();
-            var g = Create(req);
+            var g = Create();
             g.Add(30000);
-            CollectionAssert.AreEqual(new[] { FormId.Small }, req);
-            Assert.AreEqual(FormId.Egg, g.Form, "不能跳过奶蛋→小奶蛙");
-
-            g.CommitEvolution();
-            CollectionAssert.AreEqual(new[] { FormId.Small, FormId.Big }, req);
-            Assert.AreEqual(FormId.Small, g.Form);
-
-            g.CommitEvolution();
-            Assert.AreEqual(FormId.Big, g.Form);
-            Assert.IsFalse(g.HasPendingEvolution);
-            Assert.AreEqual(2, req.Count);
+            g.CommitUnlock();
+            Assert.AreEqual(FormId.Small, g.HighestForm, "不能跳过奶蛋→小奶蛙");
+            Assert.IsTrue(g.HasPendingUnlock);
+            g.CommitUnlock();
+            Assert.AreEqual(FormId.Big, g.HighestForm);
+            Assert.IsFalse(g.HasPendingUnlock);
         }
 
         [Test]
-        public void AfterBig_AddingNeverRequests()
+        public void AfterBig_AddingNeverPending()
         {
-            var req = new List<FormId>();
-            var g = Create(req);
-            g.Add(25000);
-            g.CommitEvolution();
-            g.CommitEvolution();
-            req.Clear();
-
+            var g = new GrowthService(5000, 12000, 12000, FormId.Big);
             g.Add(100000);
-            Assert.IsEmpty(req);
-            Assert.AreEqual(FormId.Big, g.Form);
-            Assert.AreEqual(125000, g.Growth);
+            Assert.IsFalse(g.HasPendingUnlock);
+            Assert.AreEqual(112000, g.Growth);
             Assert.IsNull(g.NextThreshold);
         }
 
         [Test]
-        public void RepeatedAddsWhilePending_RequestOnlyOnce()
+        public void OldSave_HigherFormThanThresholdAllows_NeverDowngrades()
         {
-            var req = new List<FormId>();
-            var g = Create(req);
-            g.Add(3000);
+            var g = new GrowthService(5000, 12000, 4000, FormId.Small);
+            Assert.AreEqual(FormId.Small, g.HighestForm);
+            Assert.IsFalse(g.HasPendingUnlock);
+        }
+
+        [Test]
+        public void GrowthIsLong_NoOverflow()
+        {
+            var g = new GrowthService(5000, 12000, long.MaxValue - 1, FormId.Big);
             g.Add(10);
-            g.Add(10);
-            Assert.AreEqual(1, req.Count);
+            Assert.AreEqual(long.MaxValue, g.Growth);
         }
     }
 }

@@ -173,6 +173,7 @@ namespace Naiwa.Input
                         TimestampMs = data.time,
                         ScreenX = data.pt.X,
                         ScreenY = data.pt.Y,
+                        WheelDelta = kind == RawKind.MouseWheel ? (short)((data.mouseData >> 16) & 0xFFFF) : 0,
                     });
                 }
             }

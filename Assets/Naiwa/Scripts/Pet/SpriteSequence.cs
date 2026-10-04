@@ -8,6 +8,8 @@ namespace Naiwa.Pet
         public readonly Sprite[] Frames;
         public readonly float Fps;
         public readonly bool Loop;
+        /// <summary>显示缩放（所属阶段的 pet.xxxScale），以脚底为锚点。由 FormLibrary 加载时设置。</summary>
+        public float DisplayScale = 1f;
 
         public SpriteSequence(string id, Sprite[] frames, float fps, bool loop)
         {

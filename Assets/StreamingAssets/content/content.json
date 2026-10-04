@@ -1,0 +1,36 @@
+{
+  "schemaVersion": 2,
+  "forms": [
+    {
+      "form": "Egg", "displayName": "奶蛋",
+      "idle": { "folder": "egg_Idle", "fps": 12 },
+      "emotes": [
+        { "id": "egg_drink", "displayName": "干一杯",     "folder": "egg_emo_drink", "fps": 24, "unlock": "Default", "icon": "icons/egg_drink.png" },
+        { "id": "egg_bath",  "displayName": "泡个澡",     "folder": "egg_emo_bath",  "fps": 24, "unlock": "Default", "icon": "icons/egg_bath.png" },
+        { "id": "egg_sleep", "displayName": "睡个好觉",   "folder": "egg_sleep",     "fps": 24, "unlock": "Lottery", "lotteryWeight": 1, "icon": "icons/egg_sleep.png" },
+        { "id": "egg_think", "displayName": "脑内小剧场", "folder": "egg_think",     "fps": 24, "unlock": "Lottery", "lotteryWeight": 1, "icon": "icons/egg_think.png" }
+      ]
+    },
+    {
+      "form": "Small", "displayName": "小奶蛙",
+      "idle": { "folder": "small_idle", "fps": 24 },
+      "emotes": [
+        { "id": "small_heart",    "displayName": "比心",     "folder": "small_heart",    "fps": 24, "unlock": "Default", "icon": "icons/small_heart.png" },
+        { "id": "small_armcross", "displayName": "抱臂摇摆", "folder": "small_armcross", "fps": 24, "unlock": "Lottery", "lotteryWeight": 1, "icon": "icons/small_armcross.png" },
+        { "id": "small_cat",      "displayName": "变身猫猫", "folder": "small_cat",      "fps": 24, "unlock": "Lottery", "lotteryWeight": 1, "icon": "icons/small_cat.png" },
+        { "id": "small_icecream", "displayName": "吃冰淇淋", "folder": "small_icecream", "fps": 24, "unlock": "Lottery", "lotteryWeight": 1, "icon": "icons/small_icecream.png" }
+      ]
+    },
+    {
+      "form": "Big", "displayName": "大奶蛙",
+      "idle": { "folder": "big_Idle", "fps": 12 },
+      "emotes": [
+        { "id": "big_laugh",  "displayName": "捧腹大笑",   "folder": "big_emo_laugh", "fps": 24, "unlock": "Default", "icon": "icons/big_laugh.png" },
+        { "id": "big_fall",   "displayName": "摔个大跟头", "folder": "big_emo_fall",  "fps": 24, "unlock": "Lottery", "lotteryWeight": 1, "icon": "icons/big_fall.png" },
+        { "id": "big_invade", "displayName": "入侵！",     "folder": "big_invade",    "fps": 24, "unlock": "Lottery", "lotteryWeight": 1, "icon": "icons/big_invade.png" },
+        { "id": "big_look",   "displayName": "回头看看",   "folder": "big_look",      "fps": 24, "unlock": "Lottery", "lotteryWeight": 1, "icon": "icons/big_look.png" },
+        { "id": "big_shit",   "displayName": "便便出没",   "folder": "big_shit",      "fps": 24, "unlock": "Lottery", "lotteryWeight": 1, "icon": "icons/big_shit.png" }
+      ]
+    }
+  ]
+}

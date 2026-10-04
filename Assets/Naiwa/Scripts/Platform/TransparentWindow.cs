@@ -17,6 +17,44 @@ namespace Naiwa.Platform
     {
         public bool IsNative { get; private set; }
         public int SizePx { get; private set; }
+        public int WidthPx { get; private set; }
+        public int HeightPx { get; private set; }
+
+        /// <summary>某个桌面矩形所在（或最近的）显示器的工作区。Editor 下返回一个很大的矩形。</summary>
+        public RectInt GetWorkAreaFor(RectInt desktopRect)
+        {
+#if UNITY_STANDALONE_WIN && !UNITY_EDITOR
+            var rect = new Win32Native.RECT { Left = desktopRect.xMin, Top = desktopRect.yMin, Right = desktopRect.xMax, Bottom = desktopRect.yMax };
+            var mon = Win32Native.MonitorFromRect(ref rect, Win32Native.MONITOR_DEFAULTTONEAREST);
+            var info = new Win32Native.MONITORINFO { cbSize = System.Runtime.InteropServices.Marshal.SizeOf(typeof(Win32Native.MONITORINFO)) };
+            if (mon != IntPtr.Zero && Win32Native.GetMonitorInfo(mon, ref info))
+                return new RectInt(info.rcWork.Left, info.rcWork.Top, info.rcWork.Right - info.rcWork.Left, info.rcWork.Bottom - info.rcWork.Top);
+#endif
+            return new RectInt(-100000, -100000, 200000, 200000);
+        }
+
+        /// <summary>主显示器工作区。</summary>
+        public RectInt GetPrimaryWorkArea()
+        {
+#if UNITY_STANDALONE_WIN && !UNITY_EDITOR
+            var mon = Win32Native.MonitorFromPoint(new Win32Native.POINT { X = 0, Y = 0 }, Win32Native.MONITOR_DEFAULTTOPRIMARY);
+            var info = new Win32Native.MONITORINFO { cbSize = System.Runtime.InteropServices.Marshal.SizeOf(typeof(Win32Native.MONITORINFO)) };
+            if (mon != IntPtr.Zero && Win32Native.GetMonitorInfo(mon, ref info))
+                return new RectInt(info.rcWork.Left, info.rcWork.Top, info.rcWork.Right - info.rcWork.Left, info.rcWork.Bottom - info.rcWork.Top);
+#endif
+            return new RectInt(0, 0, Screen.width, Screen.height);
+        }
+
+        /// <summary>该桌面矩形是否落在任何显示器上。</summary>
+        public bool IsOnAnyMonitor(RectInt desktopRect)
+        {
+#if UNITY_STANDALONE_WIN && !UNITY_EDITOR
+            var rect = new Win32Native.RECT { Left = desktopRect.xMin, Top = desktopRect.yMin, Right = desktopRect.xMax, Bottom = desktopRect.yMax };
+            return Win32Native.MonitorFromRect(ref rect, Win32Native.MONITOR_DEFAULTTONULL) != IntPtr.Zero;
+#else
+            return true;
+#endif
+        }
 
 #if UNITY_STANDALONE_WIN && !UNITY_EDITOR
         IntPtr _hwnd;
@@ -27,9 +65,11 @@ namespace Naiwa.Platform
 #endif
 
         /// <summary>应用窗口样式。应在第一帧之后调用（Unity 已完成窗口创建）。</summary>
-        public void Initialize(int sizePx, bool useLayeredAlpha)
+        public void Initialize(int widthPx, int heightPx, bool useLayeredAlpha)
         {
-            SizePx = sizePx;
+            SizePx = widthPx;
+            WidthPx = widthPx;
+            HeightPx = heightPx;
 #if UNITY_STANDALONE_WIN && !UNITY_EDITOR
             _hwnd = FindUnityWindow();
             if (_hwnd == IntPtr.Zero)
@@ -50,7 +90,7 @@ namespace Naiwa.Platform
             if (hr != 0) Debug.LogWarning($"[Naiwa] DwmExtendFrameIntoClientArea 失败 hr=0x{hr:X8}");
 
             Win32Native.GetWindowRect(_hwnd, out var r);
-            Win32Native.SetWindowPos(_hwnd, Win32Native.HWND_TOPMOST, r.Left, r.Top, sizePx, sizePx,
+            Win32Native.SetWindowPos(_hwnd, Win32Native.HWND_TOPMOST, r.Left, r.Top, widthPx, heightPx,
                 Win32Native.SWP_FRAMECHANGED | Win32Native.SWP_NOACTIVATE);
             Win32Native.ShowWindow(_hwnd, Win32Native.SW_SHOW);
             _clickThrough = false;

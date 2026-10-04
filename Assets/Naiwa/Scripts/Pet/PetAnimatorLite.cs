@@ -34,11 +34,18 @@ namespace Naiwa.Pet
                 }
             }
 
+            /// <summary>相对缩放（进化特效的鼓起/回弹用）；实际缩放 = Scale × 序列所属阶段的 DisplayScale。</summary>
             public float Scale
             {
-                get => Renderer.transform.localScale.x;
-                set => Renderer.transform.localScale = new Vector3(value, value, 1f);
+                get => _scale;
+                set
+                {
+                    _scale = value;
+                    float s = value * (Sequence != null ? Sequence.DisplayScale : 1f);
+                    Renderer.transform.localScale = new Vector3(s, s, 1f);
+                }
             }
+            float _scale = 1f;
 
             public int CurrentFrame => Sequence?.FrameIndexAt(Elapsed, Loop) ?? -1;
 
@@ -48,6 +55,7 @@ namespace Naiwa.Pet
                 Loop = loop;
                 Elapsed = 0f;
                 FinishedRaised = false;
+                Scale = _scale;
                 ApplyFrame();
             }
 
@@ -155,8 +163,10 @@ namespace Naiwa.Pet
             {
                 _fadeElapsed += dt;
                 float k = Mathf.Clamp01(_fadeElapsed / _fadeDuration);
-                _other.Alpha = k;
-                _current.Alpha = 1f - k;
+                // 不透明交叉：前半段新层（在上）淡入、旧层保持不透明；后半段新层已不透明、旧层在下面淡出。
+                // 两层重叠处合成 alpha 始终为 1，不会出现「同时半透明」的闪烁。
+                _other.Alpha = CrossfadeTopAlpha(k);
+                _current.Alpha = CrossfadeBottomAlpha(k);
                 if (k >= 1f)
                 {
                     _fading = false;
@@ -170,6 +180,9 @@ namespace Naiwa.Pet
             if (f1 != null) Finished?.Invoke(f1);
             if (f2 != null) Finished?.Invoke(f2);
         }
+
+        public static float CrossfadeTopAlpha(float k) => Mathf.Clamp01(k * 2f);
+        public static float CrossfadeBottomAlpha(float k) => Mathf.Clamp01(2f - k * 2f);
 
         static SpriteSequence Advance(Layer layer, float dt)
         {

@@ -2,7 +2,8 @@
     "name": "Naiwa.Editor",
     "rootNamespace": "Naiwa.EditorTools",
     "references": [
-        "Naiwa.Runtime"
+        "Naiwa.Runtime",
+        "UnityEngine.UI"
     ],
     "includePlatforms": [
         "Editor"

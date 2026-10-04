@@ -17,7 +17,22 @@ namespace Naiwa.Pet
 
         PolygonCollider2D Collider => _collider != null ? _collider : (_collider = GetComponent<PolygonCollider2D>());
 
-        public void SetShapeFrom(Sprite sprite)
+        /// <summary>当前判定形状的最高点（本地坐标，世界单位，脚底为 0）。用于「新！」定位。</summary>
+        public float TopY { get; private set; }
+
+        /// <param name="scale">阶段显示缩放（以脚底 = 原点为锚点）。</param>
+        public void SetShapeFrom(Sprite sprite, float scale = 1f)
+        {
+            _scale = scale > 0f ? scale : 1f;
+            ApplyShape(sprite);
+            var col = Collider;
+            float top = 0f;
+            for (int i = 0; i < col.pathCount; i++)
+                foreach (var p in col.GetPath(i)) top = Mathf.Max(top, p.y);
+            TopY = top;
+        }
+
+        void ApplyShape(Sprite sprite)
         {
             var col = Collider;
             if (sprite == null)
@@ -35,8 +50,8 @@ namespace Naiwa.Pet
                 col.pathCount = 1;
                 col.SetPath(0, new[]
                 {
-                    new Vector2(b.min.x, b.min.y), new Vector2(b.max.x, b.min.y),
-                    new Vector2(b.max.x, b.max.y), new Vector2(b.min.x, b.max.y),
+                    new Vector2(b.min.x, b.min.y) * _scale, new Vector2(b.max.x, b.min.y) * _scale,
+                    new Vector2(b.max.x, b.max.y) * _scale, new Vector2(b.min.x, b.max.y) * _scale,
                 });
                 return;
             }
@@ -46,9 +61,12 @@ namespace Naiwa.Pet
             {
                 _points.Clear();
                 sprite.GetPhysicsShape(i, _points);
+                for (int p = 0; p < _points.Count; p++) _points[p] *= _scale;
                 col.SetPath(i, _points);
             }
         }
+
+        float _scale = 1f;
 
         /// <summary>Unity 屏幕坐标（原点左下）是否命中角色。</summary>
         public bool HitUnityScreen(Vector2 screenPoint)

@@ -18,6 +18,8 @@ namespace Naiwa.Input
         public long TimestampMs;
         /// <summary>仅鼠标事件有效（桌面坐标，y 向下）。</summary>
         public int ScreenX, ScreenY;
+        /// <summary>仅 MouseWheel 有效：滚轮增量（一格 = ±120，向上为正）。</summary>
+        public int WheelDelta;
 
         public bool IsPress => Kind == RawKind.KeyDown || Kind == RawKind.MouseDown;
     }

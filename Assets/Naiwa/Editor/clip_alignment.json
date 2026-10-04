@@ -1,0 +1,28 @@
+{
+    "entries": [
+        {
+            "folder": "egg_sleep",
+            "ppu": 109.6989974975586,
+            "pivotX": 0.5033199787139893,
+            "pivotY": 0.09517999738454819,
+            "canvasPx": 768,
+            "manual": false
+        },
+        {
+            "folder": "small_cat",
+            "ppu": 100.0,
+            "pivotX": 0.5483300089836121,
+            "pivotY": 0.03167000040411949,
+            "canvasPx": 600,
+            "manual": true
+        },
+        {
+            "folder": "small_icecream",
+            "ppu": 100.0,
+            "pivotX": 0.4966700077056885,
+            "pivotY": 0.03167000040411949,
+            "canvasPx": 600,
+            "manual": true
+        }
+    ]
+}

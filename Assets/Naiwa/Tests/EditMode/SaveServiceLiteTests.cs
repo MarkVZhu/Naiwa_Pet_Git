@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using Naiwa.Save;
 using NUnit.Framework;
@@ -24,13 +25,22 @@ namespace Naiwa.Tests
 
         SaveServiceLite Create() => new SaveServiceLite(_dir, _ => { });
 
-        static SaveDataLite Sample(int growth) => new SaveDataLite
+        static SaveDataLite Sample(long growth) => new SaveDataLite
         {
             growth = growth,
             form = 1,
+            highestForm = 2,
+            clicks = 777,
+            clicksLifetimeEarned = 900,
+            clicksLifetimeSpent = 123,
+            unlockedEmotes = new List<string> { "egg_drink", "big_fall" },
+            lotteryNextAvailableUnixMs = 1790000000000,
+            lotteryDrawCount = 3,
             windowX = 1234,
             windowY = -56,
             countingPaused = true,
+            hudShowClicks = false,
+            hudShowGrowth = true,
         };
 
         [Test]
@@ -42,12 +52,22 @@ namespace Naiwa.Tests
             var reader = Create();
             var loaded = reader.Load();
             Assert.AreEqual(SaveLoadSource.Main, reader.LastLoadSource);
-            Assert.AreEqual(1, loaded.version);
+            Assert.IsFalse(reader.LastLoadMigrated);
+            Assert.AreEqual(2, loaded.version);
             Assert.AreEqual(12345, loaded.growth);
             Assert.AreEqual(1, loaded.form);
+            Assert.AreEqual(2, loaded.highestForm);
+            Assert.AreEqual(777, loaded.clicks);
+            Assert.AreEqual(900, loaded.clicksLifetimeEarned);
+            Assert.AreEqual(123, loaded.clicksLifetimeSpent);
+            CollectionAssert.AreEqual(new[] { "egg_drink", "big_fall" }, loaded.unlockedEmotes);
+            Assert.AreEqual(1790000000000, loaded.lotteryNextAvailableUnixMs);
+            Assert.AreEqual(3, loaded.lotteryDrawCount);
             Assert.AreEqual(1234, loaded.windowX);
             Assert.AreEqual(-56, loaded.windowY);
             Assert.IsTrue(loaded.countingPaused);
+            Assert.IsFalse(loaded.hudShowClicks);
+            Assert.IsTrue(loaded.hudShowGrowth);
             Assert.IsFalse(File.Exists(svc.TempPath));
         }
 
@@ -55,8 +75,8 @@ namespace Naiwa.Tests
         public void MainCorrupted_RecoversFromBackup()
         {
             var svc = Create();
-            svc.Save(Sample(100));   // 主文件
-            svc.Save(Sample(200));   // 主文件=200，.bak=100
+            svc.Save(Sample(100));
+            svc.Save(Sample(200));
             Assert.IsTrue(File.Exists(svc.BackupPath));
 
             File.WriteAllText(svc.MainPath, "{ broken json ###");
@@ -79,42 +99,31 @@ namespace Naiwa.Tests
             var loaded = svc.Load();
             Assert.AreEqual(SaveLoadSource.NewDefault, svc.LastLoadSource);
             Assert.AreEqual(0, loaded.growth);
-            Assert.AreEqual(0, loaded.form);
+            Assert.AreEqual(0, loaded.clicks);
             Assert.IsFalse(loaded.HasWindowPosition);
-            Assert.IsFalse(loaded.countingPaused);
+            Assert.IsTrue(loaded.hudShowClicks);
+            Assert.IsTrue(loaded.hudShowGrowth);
             Assert.IsNotEmpty(Directory.GetFiles(_dir, "save.corrupt.*.json"));
         }
 
         [Test]
-        public void ShowCounter_DefaultsTrue_AndRoundTrips()
+        public void NoFiles_CreatesDefaultWithConfiguredToggles()
         {
-            var svc = Create();
-            Assert.IsTrue(svc.Load().showCounter);
-
-            var data = Sample(1);
-            data.showCounter = false;
-            svc.Save(data);
-            Assert.IsFalse(Create().Load().showCounter);
-        }
-
-        [Test]
-        public void OldSaveWithoutShowCounter_LoadsAsTrue()
-        {
-            var svc = Create();
-            File.WriteAllText(svc.MainPath, "{\"version\":1,\"growth\":42,\"form\":0,\"windowX\":10,\"windowY\":20,\"countingPaused\":false}");
-            var loaded = svc.Load();
-            Assert.AreEqual(SaveLoadSource.Main, svc.LastLoadSource);
-            Assert.AreEqual(42, loaded.growth);
-            Assert.IsTrue(loaded.showCounter);
-        }
-
-        [Test]
-        public void NoFiles_CreatesDefault()
-        {
-            var svc = Create();
+            var svc = new SaveServiceLite(_dir, _ => { }, new SaveDefaults { hudShowClicks = false, hudShowGrowth = true });
             var loaded = svc.Load();
             Assert.AreEqual(SaveLoadSource.NewDefault, svc.LastLoadSource);
             Assert.AreEqual(SaveDataLite.CurrentVersion, loaded.version);
+            Assert.IsFalse(loaded.hudShowClicks);
+            Assert.IsTrue(loaded.hudShowGrowth);
+        }
+
+        [Test]
+        public void SaveCount_IncrementsOnEachSuccessfulWrite()
+        {
+            var svc = Create();
+            svc.Save(Sample(1));
+            svc.Save(Sample(2));
+            Assert.AreEqual(2, svc.SaveCount);
         }
     }
 }

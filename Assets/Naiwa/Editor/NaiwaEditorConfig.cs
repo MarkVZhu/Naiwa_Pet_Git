@@ -17,11 +17,19 @@ namespace Naiwa.EditorTools
         /// <summary>序列帧根目录（工程相对路径），例如 Assets/Resources/AnimationImages。</summary>
         public static string ClipsAssetRoot => "Assets/Resources/" + Config.content.clipsResourcePath.Trim('/');
 
-        public static string ManifestAssetPath => "Assets/Naiwa/Resources/" + Config.content.manifestResourcePath.Trim('/') + ".json";
+        /// <summary>v0.1 映射表（回退用）。</summary>
+        public static string LegacyManifestAssetPath => "Assets/Naiwa/Resources/" + Config.content.manifestResourcePath.Trim('/') + ".json";
+
+        /// <summary>v1.0 内容配置 StreamingAssets/content/content.json。</summary>
+        public static string ContentJsonAssetPath => "Assets/StreamingAssets/" + Config.content.contentJsonPath.Trim('/');
+        public static string ContentDirAssetPath => Path.GetDirectoryName(ContentJsonAssetPath)?.Replace('\\', '/');
+
+        public static string ClipIndexAssetPath => "Assets/Naiwa/Resources/" + Config.content.clipIndexResourcePath.Trim('/') + ".json";
 
         public const string MainScenePath = "Assets/Naiwa/Scenes/Main.unity";
         public const string SmokeMaterialPath = "Assets/Naiwa/Materials/SmokePremultiplied.mat";
-        public const string TextMaterialPath = "Assets/Naiwa/Materials/TextPremultiplied.mat";
+        public const string UiMaterialPath = "Assets/Naiwa/Materials/UIPremultiplied.mat";
+        public const string SilhouetteMaterialPath = "Assets/Naiwa/Materials/UISilhouettePremultiplied.mat";
         public const string BuildOutputPath = "Builds/NaiwaPet/NaiwaPet.exe";
 
         public static string ToFullPath(string assetPath) =>

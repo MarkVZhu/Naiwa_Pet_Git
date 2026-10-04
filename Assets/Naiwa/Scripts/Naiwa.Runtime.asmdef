@@ -1,7 +1,9 @@
 {
     "name": "Naiwa.Runtime",
     "rootNamespace": "Naiwa",
-    "references": [],
+    "references": [
+        "UnityEngine.UI"
+    ],
     "includePlatforms": [],
     "excludePlatforms": [],
     "allowUnsafeCode": false,
