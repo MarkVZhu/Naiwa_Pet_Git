@@ -72,6 +72,31 @@ namespace Naiwa.Tests
         }
 
         [Test]
+        public void DisplayScale_RoundTrips_AndOldSaveDefaultsTo1()
+        {
+            var svc = Create();
+            var data = Sample(5);
+            data.displayScale = 1.35f;
+            svc.Save(data);
+            Assert.AreEqual(1.35f, Create().Load().displayScale, 1e-5f);
+
+            // 加缩放功能之前的存档没有 displayScale 字段
+            File.WriteAllText(svc.MainPath, "{ \"version\": 2, \"growth\": 10, \"windowX\": 5, \"windowY\": 6 }");
+            File.Delete(svc.BackupPath);
+            var old = Create().Load();
+            Assert.AreEqual(10, old.growth);
+            Assert.AreEqual(1f, old.displayScale);
+        }
+
+        [Test]
+        public void ApplyHeadroom_ShiftScalesWithDisplayScale()
+        {
+            var d = new SaveDataLite { windowX = 0, windowY = 100, windowHeadroomPx = 0 };
+            Assert.IsTrue(d.ApplyHeadroom(40, 1.5f));
+            Assert.AreEqual(40, d.windowY, "顶部留白 +40 → 1.5 倍时窗口上移 60");
+        }
+
+        [Test]
         public void MainCorrupted_RecoversFromBackup()
         {
             var svc = Create();

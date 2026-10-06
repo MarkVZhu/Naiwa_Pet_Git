@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.EventSystems;
+using UnityEngine.UI;
 
 namespace Naiwa.UI
 {
@@ -21,6 +22,8 @@ namespace Naiwa.UI
         /// <summary>光标当前是否在可交互 UI（raycastTarget）上。</summary>
         public bool IsOverUi { get; private set; }
         public GameObject Hovered => _pointer?.pointerEnter;
+        /// <summary>左键在 UI 上按下还没抬起（例如正在拖滑块）。期间窗口不应穿透。</summary>
+        public bool IsPressing => _pointer != null && (_pointer.pointerPress != null || _pointer.pointerDrag != null);
 
         public void SetPositionProvider(Func<Vector2> provider) => _positionProvider = provider;
 
@@ -57,6 +60,23 @@ namespace Naiwa.UI
 
             HandlePointerExitAndEnter(p, first.gameObject);
             IsOverUi = first.gameObject != null;
+            ProcessDrag(p);
+        }
+
+        /// <summary>按住期间的拖动（滑块等 IDragHandler）：超过阈值后 beginDrag，之后每次移动发 drag。</summary>
+        void ProcessDrag(PointerEventData p)
+        {
+            if (p.pointerDrag == null) return;
+            if (!p.dragging)
+            {
+                bool moved = (p.position - p.pressPosition).sqrMagnitude >= eventSystem.pixelDragThreshold * eventSystem.pixelDragThreshold;
+                if (p.useDragThreshold && !moved) return;
+                ExecuteEvents.Execute(p.pointerDrag, p, ExecuteEvents.beginDragHandler);
+                p.dragging = true;
+                p.eligibleForClick = false;
+            }
+            if (p.delta.sqrMagnitude > 0f)
+                ExecuteEvents.Execute(p.pointerDrag, p, ExecuteEvents.dragHandler);
         }
 
         /// <summary>左键按下。返回 true 表示 UI 接住了这次按下（宠物不再处理）。</summary>
@@ -81,6 +101,12 @@ namespace Naiwa.UI
             p.rawPointerPress = go;
             p.clickTime = Time.unscaledTime;
             p.clickCount = 1;
+
+            // 只把拖动交给滑块；图鉴的 ScrollRect 保持「只用滚轮滚动」，格子点击不会因为手抖被吞掉
+            var drag = ExecuteEvents.GetEventHandler<IDragHandler>(go);
+            p.pointerDrag = drag != null && drag.GetComponent<Slider>() != null ? drag : null;
+            if (p.pointerDrag != null)
+                ExecuteEvents.Execute(p.pointerDrag, p, ExecuteEvents.initializePotentialDrag);
             return true;
         }
 
@@ -88,7 +114,7 @@ namespace Naiwa.UI
         public bool PointerUp()
         {
             var p = Pointer;
-            if (p.pointerPress == null && p.rawPointerPress == null) return false;
+            if (p.pointerPress == null && p.rawPointerPress == null && p.pointerDrag == null) return false;
             Tick();
 
             var current = p.pointerCurrentRaycast.gameObject;
@@ -98,9 +124,14 @@ namespace Naiwa.UI
             if (p.pointerPress != null && p.pointerPress == clickHandler && p.eligibleForClick)
                 ExecuteEvents.Execute(p.pointerPress, p, ExecuteEvents.pointerClickHandler);
 
+            if (p.pointerDrag != null && p.dragging)
+                ExecuteEvents.Execute(p.pointerDrag, p, ExecuteEvents.endDragHandler);
+
             p.eligibleForClick = false;
             p.pointerPress = null;
             p.rawPointerPress = null;
+            p.pointerDrag = null;
+            p.dragging = false;
             return true;
         }
 

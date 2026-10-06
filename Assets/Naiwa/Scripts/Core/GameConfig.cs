@@ -81,6 +81,9 @@ namespace Naiwa.Core
             if (window.marginPx < 0) window.marginPx = d.window.marginPx;
             if (window.sideWidthPx < 240) window.sideWidthPx = d.window.sideWidthPx;
             if (window.hudHeightPx < 40) window.hudHeightPx = d.window.hudHeightPx;
+            if (!(window.scaleMin >= 0.1f && window.scaleMin <= 1f)) window.scaleMin = d.window.scaleMin;
+            if (!(window.scaleMax >= 1f && window.scaleMax <= 3f)) window.scaleMax = d.window.scaleMax;
+            if (!(window.scaleStep > 0f && window.scaleStep <= 0.5f)) window.scaleStep = d.window.scaleStep;
             if (app.targetFps < 5) app.targetFps = d.app.targetFps;
             if (app.saveIntervalSec < 1) app.saveIntervalSec = d.app.saveIntervalSec;
             if (evolution.totalSec < evolution.newSettleEndSec) evolution.totalSec = Math.Max(d.evolution.totalSec, evolution.newSettleEndSec);
@@ -273,6 +276,21 @@ namespace Naiwa.Core
         public float minVisibleFraction = 0.3f; // [P] §3.3，只约束宠物区 + HUD 区
         /// <summary>[A] 加 WS_EX_LAYERED 后调用 SetLayeredWindowAttributes(alpha=255) 使窗口可见。</summary>
         public bool useLayeredAlpha = true;
+        /// <summary>[R] 右键菜单「调整大小」的全局缩放范围（整个窗口：宠物、HUD、图鉴一起缩放）。</summary>
+        public float scaleMin = 0.5f;
+        public float scaleMax = 1.5f;
+        /// <summary>[P] 滑块步长。</summary>
+        public float scaleStep = 0.05f;
+
+        /// <summary>限制到 [scaleMin, scaleMax] 并对齐到步长；非法值回到 1。</summary>
+        public float ClampScale(float scale)
+        {
+            if (float.IsNaN(scale) || float.IsInfinity(scale) || scale <= 0f) scale = 1f;
+            scale = Mathf.Clamp(scale, scaleMin, scaleMax);
+            if (scaleStep > 0f) scale = Mathf.Round(scale / scaleStep) * scaleStep;
+            scale = Mathf.Clamp(scale, scaleMin, scaleMax);
+            return (float)Math.Round(scale, 4);
+        }
 
         /// <summary>画布 600px 对应 6 个世界单位，1 单位 = sizePx/6 屏幕像素。</summary>
         public float PixelsPerUnit => sizePx / 6f;

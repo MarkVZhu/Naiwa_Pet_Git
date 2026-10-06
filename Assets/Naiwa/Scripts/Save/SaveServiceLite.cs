@@ -36,17 +36,19 @@ namespace Naiwa.Save
         public bool countingPaused;
         public bool hudShowClicks = true;
         public bool hudShowGrowth = true;
+        /// <summary>全局缩放（右键菜单「调整大小」）。旧存档没有该字段 = 1。windowX/windowY 是缩放后窗口的位置。</summary>
+        public float displayScale = 1f;
 
         /// <summary>v1（v0.1）的计数框开关，只用于迁移。</summary>
         public bool showCounter = true;
 
         public bool HasWindowPosition => windowX != NoPosition && windowY != NoPosition;
 
-        /// <summary>按当前顶部留白修正 windowY。返回是否有改动。</summary>
-        public bool ApplyHeadroom(int headroomPx)
+        /// <summary>按当前顶部留白修正 windowY（留白随全局缩放 scale 放大）。返回是否有改动。</summary>
+        public bool ApplyHeadroom(int headroomPx, float scale = 1f)
         {
             if (windowHeadroomPx == headroomPx) return false;
-            if (HasWindowPosition) windowY -= headroomPx - windowHeadroomPx;
+            if (HasWindowPosition) windowY -= Mathf.RoundToInt((headroomPx - windowHeadroomPx) * scale);
             windowHeadroomPx = headroomPx;
             return true;
         }

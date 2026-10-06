@@ -160,6 +160,19 @@ namespace Naiwa.Platform
 #endif
         }
 
+        /// <summary>同时改位置和尺寸（全局缩放）。Unity 收到 WM_SIZE 后自动重建后台缓冲区（resizableWindow = true）。</summary>
+        public void SetBounds(Vector2Int pos, int widthPx, int heightPx)
+        {
+#if UNITY_STANDALONE_WIN && !UNITY_EDITOR
+            if (!IsNative) return;
+            SizePx = widthPx;
+            WidthPx = widthPx;
+            HeightPx = heightPx;
+            Win32Native.SetWindowPos(_hwnd, IntPtr.Zero, pos.x, pos.y, widthPx, heightPx,
+                Win32Native.SWP_NOZORDER | Win32Native.SWP_NOACTIVATE);
+#endif
+        }
+
         /// <summary>左键当前是否物理按下（用于拖动中丢失 MouseUp 的兜底）。</summary>
         public bool IsLeftButtonDown()
         {

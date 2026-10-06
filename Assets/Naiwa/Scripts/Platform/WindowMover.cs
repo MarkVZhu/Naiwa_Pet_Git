@@ -9,12 +9,13 @@ namespace Naiwa.Platform
     public sealed class WindowMover
     {
         readonly TransparentWindow _window;
-        readonly WindowCanvasLayout _layout;
+        WindowCanvasLayout _layout;
         readonly float _minVisibleFraction;
         Vector2Int _grabOffset;
 
         public bool IsDragging { get; private set; }
         public float MinVisibleFraction => _minVisibleFraction;
+        public WindowCanvasLayout Layout => _layout;
 
         public WindowMover(TransparentWindow window, WindowCanvasLayout layout, float minVisibleFraction)
         {
@@ -52,6 +53,20 @@ namespace Naiwa.Platform
                 ? Clamp(saved)
                 : _layout.DefaultWindowPos(_window.GetPrimaryWorkArea());
             _window.MoveTo(pos);
+            return pos;
+        }
+
+        /// <summary>
+        /// 换全局缩放：窗口改成新尺寸，脚底在桌面上的位置不变，再按新尺寸限制在工作区内。返回新的窗口位置。
+        /// Editor 下窗口不能改尺寸，只换布局。
+        /// </summary>
+        public Vector2Int Rescale(WindowCanvasLayout layout)
+        {
+            var old = _layout;
+            _layout = layout;
+            if (!_window.IsNative) return Vector2Int.zero;
+            var pos = Clamp(layout.RescaledPosition(_window.GetPosition(), old));
+            _window.SetBounds(pos, layout.Width, layout.Height);
             return pos;
         }
 

@@ -1,4 +1,12 @@
 {
   "input": { "source": "GlobalHook" },
-  "debug": { "enabled": true }
+  "debug": { "enabled": true },
+  "growth": {
+    "eggToSmall": 3000,
+    "smallToBig": 9000
+  },
+  "lottery": {
+    "cost": 1000,
+    "cooldownMinutes": 20
+  }
 }

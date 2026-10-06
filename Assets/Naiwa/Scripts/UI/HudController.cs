@@ -56,7 +56,11 @@ namespace Naiwa.UI
         public RevealToast Toast { get; private set; }
         public NewBadge Badge { get; private set; }
         public CollectionPanel Collection { get; private set; }
+        public SizePanel Size { get; private set; }
         public UiKit Kit => _kit;
+
+        CanvasScaler _scaler;
+        float _displayScale = 1f;
 
         public void Initialize(GameConfig cfg, EmoteCatalog catalog, IUnlockService unlocks, IconLibrary icons,
             System.Func<FormId> displayForm)
@@ -88,6 +92,7 @@ namespace Naiwa.UI
             scaler.screenMatchMode = CanvasScaler.ScreenMatchMode.MatchWidthOrHeight;
             scaler.matchWidthOrHeight = 1f;
             scaler.referencePixelsPerUnit = 100f;
+            _scaler = scaler;
             if (gameObject.GetComponent<GraphicRaycaster>() == null) gameObject.AddComponent<GraphicRaycaster>();
 
             _root = UiKit.Rect("Window", transform);
@@ -111,7 +116,25 @@ namespace Naiwa.UI
             Collection = UiKit.Rect("Collection", _root).gameObject.AddComponent<CollectionPanel>();
             Collection.Build(_kit, cfg.collection, win.sideWidthPx, win.WindowHeightPx, catalog, unlocks, icons, displayForm);
 
+            Size = UiKit.Rect("SizePanel", _root).gameObject.AddComponent<SizePanel>();
+            Size.Build(_kit, win.scaleMin, win.scaleMax, win.ClampScale);
+
             ApplyLayout(true);
+        }
+
+        /// <summary>
+        /// 全局缩放。打包后靠窗口改尺寸实现（Canvas 按窗口高度匹配，自动跟着缩放），这里只处理：
+        /// 1) 调整大小面板保持接近原始大小，方便操作（侧区放不下时再按比例缩小）；
+        /// 2) canvasPreview ≠ 1 时（Editor 下窗口不能改尺寸）直接缩放 Canvas 预览。
+        /// </summary>
+        public void SetDisplayScale(float scale, float canvasPreview)
+        {
+            _displayScale = scale > 0f ? scale : 1f;
+            var win = _cfg.window;
+            float preview = canvasPreview > 0f ? canvasPreview : 1f;
+            _scaler.referenceResolution = new Vector2(win.WindowWidthPx / preview, win.WindowHeightPx / preview);
+            float fit = Mathf.Min(1f, _displayScale * win.sideWidthPx / (SizePanel.Width + 20f));
+            Size.transform.localScale = Vector3.one * (fit / _displayScale);
         }
 
         void BuildClicks()
@@ -231,6 +254,8 @@ namespace Naiwa.UI
             var trt = (RectTransform)Toast.transform;
             float petCenterY = _pet.anchoredPosition.y + win.sizePx / 2f;
             trt.anchoredPosition = new Vector2(sign * (win.PetAreaPx / 2f + 10f + _cfg.hud.toastWidthPx / 2f), petCenterY);
+            var srt = (RectTransform)Size.transform;
+            srt.anchoredPosition = new Vector2(sign * (win.PetAreaPx / 2f + win.sideWidthPx / 2f), petCenterY);
         }
 
         // ---------- 每帧 ----------

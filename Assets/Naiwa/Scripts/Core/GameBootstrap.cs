@@ -35,6 +35,8 @@ namespace Naiwa.Core
         const int CmdToggleClicks = 2;
         const int CmdToggleGrowth = 3;
         const int CmdToggleCollection = 4;
+        const int CmdOpenSizePanel = 5;
+        const int CmdResetSize = 6;
         const int CmdSwitchFormBase = 20; // + FormId
         const int CmdDebugClicks2000 = 40;
         const int CmdDebugClearCooldown = 41;
@@ -110,10 +112,11 @@ namespace Naiwa.Core
             _save = _saveService.Load();
             if (_saveService.LastLoadMigrated)
                 Debug.Log($"[Naiwa] 存档已从 v1 升级到 v2：点击量 = {_save.clicks}（旧存档备份为 save.v1.bak.json）");
-            _save.ApplyHeadroom(_config.window.headroomPx);
+            _save.displayScale = _config.window.ClampScale(_save.displayScale);
+            _save.ApplyHeadroom(_config.window.headroomPx, _save.displayScale);
 
             // ---- Platform ----
-            _layout = new WindowCanvasLayout(_config.window);
+            _layout = new WindowCanvasLayout(_config.window, _save.displayScale);
             _window = new TransparentWindow();
             _mover = new WindowMover(_window, _layout, _config.window.minVisibleFraction);
             _clickThrough = new ClickThroughController(_window, hitTester, () => uiInput != null && uiInput.IsOverUi);
@@ -193,6 +196,9 @@ namespace Naiwa.Core
                 hud.Bubble.Clicked += OnBubbleClicked;
                 hud.Collection.PlayRequested += id => _stateMachine.RequestPlay(id);
                 hud.Collection.CloseRequested += () => hud.Collection.Close();
+                hud.Size.Committed += s => SetDisplayScale(s);
+                hud.Size.CloseRequested += () => hud.Size.Close();
+                hud.SetDisplayScale(_save.displayScale, 1f);
             }
             else Debug.LogWarning("[Naiwa] 场景缺少 HudController（请重新执行 Naiwa/搭建主场景）");
 
@@ -277,7 +283,7 @@ namespace Naiwa.Core
             // 2. 悬停、拖动、穿透
             if (uiInput != null) uiInput.Tick();
             _router.Tick();
-            _clickThrough.Tick(_router.IsDragging || _router.IsPressPending || _menu.IsOpen);
+            _clickThrough.Tick(_router.IsDragging || _router.IsPressPending || _menu.IsOpen || (uiInput != null && uiInput.IsPressing));
 
             // 3. 调试快捷键（Editor 下方便切阶段）
             if (DebugAvailable && Application.isFocused)
@@ -432,6 +438,12 @@ namespace Naiwa.Core
             }
 
             bool collectionOpen = hud != null && hud.Collection.IsOpen;
+            int percent = Mathf.RoundToInt(_save.displayScale * 100f);
+            var sizeItems = new List<ContextMenuItem>
+            {
+                ContextMenuItem.Command(CmdOpenSizePanel, "滑块调节…", hud != null && hud.Size.IsOpen, hud != null),
+                ContextMenuItem.Command(CmdResetSize, "恢复默认（100%）", false, percent != 100),
+            };
             var items = new List<ContextMenuItem>
             {
                 ContextMenuItem.Label($"点击量：{UiTextFormat.Thousands(_wallet.Balance)}"),
@@ -440,6 +452,7 @@ namespace Naiwa.Core
                 ContextMenuItem.Separator(),
                 ContextMenuItem.Command(CmdToggleCollection, "图鉴", collectionOpen, hud != null),
                 ContextMenuItem.SubMenu("切换形态", formItems),
+                ContextMenuItem.SubMenu($"调整大小（{percent}%）", sizeItems),
                 ContextMenuItem.Command(CmdToggleClicks, "显示点击量", _save.hudShowClicks),
                 ContextMenuItem.Command(CmdToggleGrowth, "显示成长进度条", _save.hudShowGrowth),
                 ContextMenuItem.Command(CmdTogglePause, _filter.Paused ? "继续计数" : "暂停计数", _filter.Paused),
@@ -537,9 +550,22 @@ namespace Naiwa.Core
                     {
                         hud.PlaceSidePanels(_mover.ChooseSide());
                         hud.Toast.Hide();
+                        hud.Size.Close();
                         hud.Collection.Open();
                         _lotteryDirty = true;
                     }
+                    break;
+                case CmdOpenSizePanel:
+                    if (hud == null) break;
+                    if (hud.Size.IsOpen) { hud.Size.Close(); break; }
+                    hud.PlaceSidePanels(_mover.ChooseSide());
+                    hud.Toast.Hide();
+                    hud.Collection.Close();
+                    hud.Size.Open(_save.displayScale);
+                    break;
+                case CmdResetSize:
+                    SetDisplayScale(1f);
+                    if (hud != null && hud.Size.IsOpen) hud.Size.Open(_save.displayScale);
                     break;
                 case CmdDebugClicks2000:
                     _wallet.Earn(2000);
@@ -582,6 +608,37 @@ namespace Naiwa.Core
                     Quit();
                     break;
             }
+        }
+
+        /// <summary>
+        /// 全局缩放：窗口按比例改尺寸，脚底在桌面上不动（宠物、HUD、图鉴随窗口一起缩放），然后存档。
+        /// 拖动宠物过程中不处理（窗口位置由拖动控制）。
+        /// </summary>
+        void SetDisplayScale(float scale)
+        {
+            scale = _config.window.ClampScale(scale);
+            if (_router.IsDragging) return;
+            if (Mathf.Approximately(scale, _save.displayScale) && Mathf.Approximately(_mover.Layout.Scale, scale)) return;
+
+            _layout = new WindowCanvasLayout(_config.window, scale);
+            var pos = _mover.Rescale(_layout);
+            if (_window.IsNative) { _save.windowX = pos.x; _save.windowY = pos.y; }
+            _save.displayScale = scale;
+            ApplyViewScale();
+            if (hud != null && (hud.Collection.IsOpen || hud.Size.IsOpen || hud.Toast.Visible))
+                hud.PlaceSidePanels(_mover.ChooseSide());
+            SaveNow();
+        }
+
+        /// <summary>
+        /// 打包后窗口真的改尺寸，相机与 Canvas 保持参考尺寸即可；Editor（或原生窗口初始化失败）时窗口不能改尺寸，
+        /// 改为缩放相机与 Canvas 预览（以窗口中心为原点，超出部分会被裁掉）。
+        /// </summary>
+        void ApplyViewScale()
+        {
+            float preview = _window != null && _window.IsNative ? 1f : _save.displayScale;
+            if (targetCamera != null) targetCamera.orthographicSize = _config.window.OrthographicSize / preview;
+            if (hud != null) hud.SetDisplayScale(_save.displayScale, preview);
         }
 
         void DebugSetForm(FormId form)

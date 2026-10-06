@@ -8,22 +8,38 @@ namespace Naiwa.Platform
     /// <summary>
     /// 固定大画布（v1.0 §7.3）：左侧区 | 宠物区 | 右侧区，宠物区下方是 HUD 区。
     /// 所有矩形均为桌面像素坐标（y 向下），相对窗口左上角。纯函数，可测试。
+    /// scale = 全局缩放：窗口整体按比例放大/缩小，相机与 Canvas 的参考尺寸不变，所以宠物、HUD、图鉴一起缩放。
     /// </summary>
     public sealed class WindowCanvasLayout
     {
+        public readonly float Scale;
         public readonly int Width;
         public readonly int Height;
         public readonly int SideWidth;
         public readonly int PetArea;
         public readonly int HudHeight;
+        /// <summary>脚底相对窗口左上角的位置（桌面像素）。缩放前后保持脚底在桌面上不动。</summary>
+        public readonly Vector2 Feet;
 
-        public WindowCanvasLayout(WindowConfig cfg)
+        public WindowCanvasLayout(WindowConfig cfg, float scale = 1f)
         {
-            SideWidth = cfg.sideWidthPx;
-            PetArea = cfg.PetAreaPx;
-            HudHeight = cfg.hudHeightPx;
-            Width = cfg.WindowWidthPx;
-            Height = cfg.WindowHeightPx;
+            Scale = scale > 0f ? scale : 1f;
+            Width = Mathf.Max(1, Mathf.RoundToInt(cfg.WindowWidthPx * Scale));
+            Height = Mathf.Max(1, Mathf.RoundToInt(cfg.WindowHeightPx * Scale));
+            SideWidth = Mathf.RoundToInt(cfg.sideWidthPx * Scale);
+            PetArea = Width - SideWidth * 2;
+            HudHeight = Mathf.RoundToInt(cfg.hudHeightPx * Scale);
+            // 实际渲染比例由窗口高度决定（相机正交尺寸、Canvas 按高度匹配）
+            float k = Height / (float)cfg.WindowHeightPx;
+            Feet = new Vector2(Width / 2f, cfg.FeetFromTopPx * k);
+        }
+
+        /// <summary>换缩放后的窗口位置：脚底在桌面上的位置不变。</summary>
+        public Vector2Int RescaledPosition(Vector2Int windowPos, WindowCanvasLayout from)
+        {
+            float feetX = windowPos.x + from.Feet.x;
+            float feetY = windowPos.y + from.Feet.y;
+            return new Vector2Int(Mathf.RoundToInt(feetX - Feet.x), Mathf.RoundToInt(feetY - Feet.y));
         }
 
         /// <summary>宠物区 + HUD 区（窗口中间一列），受工作区约束。</summary>
