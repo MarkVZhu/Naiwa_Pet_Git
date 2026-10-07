@@ -29,7 +29,8 @@
         { "id": "big_fall",   "displayName": "摔个大跟头", "folder": "big_emo_fall",  "fps": 24, "unlock": "Lottery", "lotteryWeight": 1, "icon": "icons/big_fall.png" },
         { "id": "big_invade", "displayName": "以下犯上",     "folder": "big_invade",    "fps": 24, "unlock": "Lottery", "lotteryWeight": 1, "icon": "icons/big_invade.png" },
         { "id": "big_look",   "displayName": "回头看看",   "folder": "big_look",      "fps": 24, "unlock": "Lottery", "lotteryWeight": 1, "icon": "icons/big_look.png" },
-        { "id": "big_shit",   "displayName": "便便出没",   "folder": "big_shit",      "fps": 24, "unlock": "Lottery", "lotteryWeight": 1, "icon": "icons/big_shit.png" }
+        { "id": "big_shit",   "displayName": "便便出没",   "folder": "big_shit",      "fps": 24, "unlock": "Lottery", "lotteryWeight": 1, "icon": "icons/big_shit.png" },
+        { "id": "big_box",   "displayName": "东南亚拳王",   "folder": "big_box",      "fps": 24, "unlock": "Lottery", "lotteryWeight": 1, "icon": "icons/big_box.png" }
       ]
     }
   ]
