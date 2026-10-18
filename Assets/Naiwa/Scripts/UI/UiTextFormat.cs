@@ -36,7 +36,7 @@ namespace Naiwa.UI
                 case LotteryState.Ready: return "可以抽了！";
                 case LotteryState.Cooldown: return $"冷却中，还剩 {Duration(s.CooldownLeft)}";
                 case LotteryState.NotEnoughClicks: return $"还差 {Thousands(s.ClicksShort)} 点击量";
-                default: return "已全部收集";
+                default: return "抽奖表情已全部收集";
             }
         }
 
@@ -47,7 +47,7 @@ namespace Naiwa.UI
                 case LotteryState.Ready: return "可以抽奖了！点一下奶蛙脚下的转盘";
                 case LotteryState.Cooldown: return $"抽奖冷却中，还剩 {Duration(s.CooldownLeft)}";
                 case LotteryState.NotEnoughClicks: return $"还差 {Thousands(s.ClicksShort)} 点击量就能抽奖";
-                default: return "所有表情都收集齐了！";
+                default: return "抽奖表情都收集齐了！";
             }
         }
 

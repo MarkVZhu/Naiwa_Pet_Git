@@ -37,6 +37,7 @@ namespace Naiwa.Core
         const int CmdToggleCollection = 4;
         const int CmdOpenSizePanel = 5;
         const int CmdResetSize = 6;
+        const int CmdReborn = 7;
         const int CmdSwitchFormBase = 20; // + FormId
         const int CmdDebugClicks2000 = 40;
         const int CmdDebugClearCooldown = 41;
@@ -46,7 +47,9 @@ namespace Naiwa.Core
         const int CmdDebugSetFormBase = 50; // + FormId
         const int CmdDebugGrowth1000 = 60;
         const int CmdDebugPlayAll = 61;
+        const int CmdDebugRebornReady = 62;
         const int CmdExit = 99;
+        const string RebornConfirmText = "重生后会成为奶蛋，点击量和成长值归零，图鉴中已解锁的表情会保留，并获得一个稀有的重生表情，你确定要重生吗？";
         const float HeldKeyPruneIntervalSec = 10f;
         const float LotteryCheckIntervalSec = 1f;
 
@@ -67,6 +70,7 @@ namespace Naiwa.Core
         FormSwitchService _forms;
         ClickWallet _wallet;
         LotteryService _lottery;
+        readonly IRandom _rng = new SystemRandom();
         InputFilterLite _filter;
         readonly List<IInputSource> _sources = new List<IInputSource>();
         readonly List<RawInputEvent> _events = new List<RawInputEvent>(64);
@@ -136,11 +140,11 @@ namespace Naiwa.Core
             var highest = Enum.IsDefined(typeof(FormId), _save.highestForm) ? (FormId)_save.highestForm : FormId.Egg;
             var display = Enum.IsDefined(typeof(FormId), _save.form) ? (FormId)_save.form : FormId.Egg;
             if (display > highest) highest = display;
-            _growth = new GrowthService(_config.growth.eggToSmall, _config.growth.smallToBig, _save.growth, highest);
+            _growth = new GrowthService(_config.growth.eggToSmall, _config.growth.smallToBig, _save.growth, highest, _config.growth.rebornGrowth);
             _forms = new FormSwitchService(_growth, display, _config.form.autoEvolveOnUnlock);
             _wallet = new ClickWallet(_save.clicks, _save.clicksLifetimeEarned, _save.clicksLifetimeSpent);
             _wallet.Changed += (_, __) => _lotteryDirty = true;
-            _lottery = new LotteryService(_wallet, _catalog, _unlocks, new SystemRandom(), () => _forms.DisplayForm, SaveNow,
+            _lottery = new LotteryService(_wallet, _catalog, _unlocks, _rng, () => _forms.DisplayForm, SaveNow,
                 _config.lottery.cost, _config.lottery.Cooldown, _config.lottery.Scope,
                 _save.lotteryNextAvailableUnixMs, _save.lotteryDrawCount);
 
@@ -356,7 +360,7 @@ namespace Naiwa.Core
         void RefreshGrowthBar(bool snap)
         {
             if (hud == null) return;
-            hud.SetGrowth(GrowthProgress.Ratio(_growth), GrowthProgress.IsMax(_growth.HighestForm), snap);
+            hud.SetGrowth(GrowthProgress.Ratio(_growth), GrowthProgress.IsMax(_growth), snap);
         }
 
         void RefreshLotteryUi()
@@ -458,6 +462,9 @@ namespace Naiwa.Core
                 ContextMenuItem.Command(CmdTogglePause, _filter.Paused ? "继续计数" : "暂停计数", _filter.Paused),
                 ContextMenuItem.Separator(),
             };
+            // v2.0：「大奶蛙[可重生]」时在「图鉴」上方出现「重生」
+            if (_growth.CanReborn)
+                items.Insert(items.FindIndex(i => i.Id == CmdToggleCollection), ContextMenuItem.Command(CmdReborn, "重生", false, hud != null && !busy));
 
             if (DebugAvailable)
             {
@@ -475,6 +482,9 @@ namespace Naiwa.Core
                 foreach (FormId f in Enum.GetValues(typeof(FormId)))
                     debugItems.Add(ContextMenuItem.Command(CmdDebugSetFormBase + (int)f,
                         $"设为{_catalog.FormDisplayName(f)}（成长值 {UiTextFormat.Thousands(_growth.ThresholdOf(f))}）", false, !busy));
+                if (_growth.RebornEnabled)
+                    debugItems.Add(ContextMenuItem.Command(CmdDebugRebornReady,
+                        $"设为{RebornReadyName}（成长值 {UiTextFormat.Thousands(_growth.RebornThreshold)}）", false, !busy));
                 debugItems.Add(ContextMenuItem.Command(CmdDebugGrowth1000, "成长 +1000"));
 
                 items.Add(ContextMenuItem.SubMenu("调试", debugItems));
@@ -489,9 +499,81 @@ namespace Naiwa.Core
         {
             string growth = UiTextFormat.Thousands(_growth.Growth);
             var highest = _growth.HighestForm;
-            if (!highest.HasNext()) return $"成长值：{growth}（已满级）";
+            if (!highest.HasNext())
+            {
+                if (!_growth.RebornEnabled) return $"成长值：{growth}（已满级）";
+                if (_growth.CanReborn) return $"成长值：{growth}（{RebornReadyName}）";
+                return $"成长值：{growth} / {UiTextFormat.Thousands(_growth.RebornThreshold)}（→ {RebornReadyName}）";
+            }
             var next = highest.Next();
             return $"成长值：{growth} / {UiTextFormat.Thousands(_growth.ThresholdOf(next))}（→ {_catalog.FormDisplayName(next)}）";
+        }
+
+        /// <summary>「大奶蛙[可重生]」。</summary>
+        string RebornReadyName => _catalog.FormDisplayName(FormId.Big) + "[可重生]";
+
+        // ---------- 重生（v2.0） ----------
+
+        void ShowRebornConfirm()
+        {
+            if (hud == null || !_growth.CanReborn) return;
+            hud.PlaceSidePanels(_mover.ChooseSide());
+            hud.Toast.Hide();
+            hud.Collection.Close();
+            hud.Size.Close();
+            hud.Confirm.Show("重生", RebornConfirmText, DoReborn);
+        }
+
+        /// <summary>
+        /// 确认重生：回到奶蛋（烟雾过场）、点击量与成长值归零、已解锁表情保留，并解锁一个重生表情
+        /// （lotteryWeight 最大的优先，同权重随机）。抽奖冷却不变。
+        /// </summary>
+        void DoReborn()
+        {
+            if (!_growth.CanReborn) return;
+            if (_router.IsDragging || _forms.IsTransitioning || _stateMachine.State == PetState.Evolving)
+            {
+                Debug.LogWarning("[Naiwa] 正在变身或拖动，本次重生取消");
+                return;
+            }
+
+            var reward = RebornRewards.Pick(_catalog, _unlocks, _rng);
+            if (!_forms.Reborn()) return;
+            _wallet.ResetBalance();
+            if (reward != null) _unlocks.Unlock(reward.Id, UnlockSource.Reborn);
+            _save.rebornCount++;
+            _lotteryDirty = true;
+            SaveNow();
+            Debug.Log($"[Naiwa] 第 {_save.rebornCount} 次重生，奖励：{(reward != null ? reward.Id : "无（重生表情已全部收集）")}");
+
+            if (hud == null) return;
+            hud.SnapClicks(_wallet.Balance, _filter.Paused);
+            RefreshGrowthBar(true);
+            hud.Collection.Refresh();
+            RevealRebornReward(reward);
+        }
+
+        void RevealRebornReward(EmoteDef def)
+        {
+            if (def == null)
+            {
+                hud.PlaceSidePanels(_mover.ChooseSide());
+                hud.Toast.Show(null, "重生成功！", "重生表情已经全部收集", "", _config.lottery.revealToastSec);
+                return;
+            }
+
+            // 重生后显示形态是奶蛋：奶蛋表情在烟雾结束后直接播放 +「新！」
+            if (def.Form == FormId.Egg) _stateMachine.QueueReveal(def.Id);
+
+            if (hud.Collection.IsOpen)
+            {
+                hud.Collection.RevealUnlocked(def.Id);
+                return;
+            }
+            string formName = _catalog.FormDisplayName(def.Form);
+            string line3 = def.Form == FormId.Egg ? formName : $"进化到{formName}后可以播放";
+            hud.PlaceSidePanels(_mover.ChooseSide());
+            hud.Toast.Show(_icons.Get(def), "重生奖励！", def.DisplayName, line3, _config.lottery.revealToastSec);
         }
 
         /// <summary>
@@ -551,6 +633,7 @@ namespace Naiwa.Core
                         hud.PlaceSidePanels(_mover.ChooseSide());
                         hud.Toast.Hide();
                         hud.Size.Close();
+                        hud.Confirm.Close();
                         hud.Collection.Open();
                         _lotteryDirty = true;
                     }
@@ -561,7 +644,16 @@ namespace Naiwa.Core
                     hud.PlaceSidePanels(_mover.ChooseSide());
                     hud.Toast.Hide();
                     hud.Collection.Close();
+                    hud.Confirm.Close();
                     hud.Size.Open(_save.displayScale);
+                    break;
+                case CmdReborn:
+                    ShowRebornConfirm();
+                    break;
+                case CmdDebugRebornReady:
+                    if (!_growth.RebornEnabled || !_forms.DebugSetForm(FormId.Big, _growth.RebornThreshold)) break;
+                    RefreshGrowthBar(true);
+                    SaveNow();
                     break;
                 case CmdResetSize:
                     SetDisplayScale(1f);
@@ -625,7 +717,7 @@ namespace Naiwa.Core
             if (_window.IsNative) { _save.windowX = pos.x; _save.windowY = pos.y; }
             _save.displayScale = scale;
             ApplyViewScale();
-            if (hud != null && (hud.Collection.IsOpen || hud.Size.IsOpen || hud.Toast.Visible))
+            if (hud != null && (hud.Collection.IsOpen || hud.Size.IsOpen || hud.Confirm.IsOpen || hud.Toast.Visible))
                 hud.PlaceSidePanels(_mover.ChooseSide());
             SaveNow();
         }

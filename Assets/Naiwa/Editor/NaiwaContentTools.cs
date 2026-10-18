@@ -12,72 +12,14 @@ using UnityEngine;
 
 namespace Naiwa.EditorTools
 {
-    /// <summary>v1.0 §9.2：Naiwa/导入素材、Naiwa/校验内容、Naiwa/导出图鉴图标（均读取 StreamingAssets/content/content.json）。</summary>
+    /// <summary>
+    /// v1.0 §9.2：Naiwa/校验内容、Naiwa/导出图鉴图标（均读取 StreamingAssets/content/content.json）。
+    /// v2.0 起不再提供「导入素材」：序列帧直接放进 Assets/Resources/AnimationImages/ 管理，避免旧素材被同步回来覆盖。
+    /// </summary>
     public static class NaiwaContentTools
     {
         const int IconSize = 256;
         const float IconMargin = 0.08f;
-
-        [MenuItem("Naiwa/导入素材", priority = 10)]
-        public static void ImportContent()
-        {
-            NaiwaEditorConfig.Invalidate();
-            var config = NaiwaEditorConfig.Config;
-            string sourceDir = config.content.sourceDir;
-            string targetRoot = NaiwaEditorConfig.ToFullPath(NaiwaEditorConfig.ClipsAssetRoot);
-
-            if (!Directory.Exists(sourceDir))
-            {
-                Debug.LogWarning($"[Naiwa] 素材源目录不存在：{sourceDir}（可在 game_config.json 的 content.sourceDir 修改）");
-                return;
-            }
-
-            var content = ReadContent(null);
-            if (content == null) return;
-
-            Directory.CreateDirectory(targetRoot);
-            var folders = EnumerateFolders(content).ToList();
-            int copiedFolders = 0, copiedFiles = 0, skipped = 0;
-
-            try
-            {
-                for (int i = 0; i < folders.Count; i++)
-                {
-                    string folder = folders[i];
-                    EditorUtility.DisplayProgressBar("Naiwa 导入素材", folder, i / (float)folders.Count);
-
-                    string srcName = NaiwaEditorConfig.ResolveChildDirectory(sourceDir, folder);
-                    if (srcName == null)
-                    {
-                        skipped++;
-                        continue; // 只在工程里存在的文件夹不需要从源目录复制
-                    }
-
-                    string dstName = NaiwaEditorConfig.ResolveChildDirectory(targetRoot, folder) ?? srcName;
-                    string dst = Path.Combine(targetRoot, dstName);
-                    Directory.CreateDirectory(dst);
-                    foreach (var file in Directory.GetFiles(Path.Combine(sourceDir, srcName), "*.png"))
-                    {
-                        string to = Path.Combine(dst, Path.GetFileName(file));
-                        if (File.Exists(to) && new FileInfo(to).Length == new FileInfo(file).Length
-                            && File.GetLastWriteTimeUtc(to) >= File.GetLastWriteTimeUtc(file))
-                            continue;
-                        File.Copy(file, to, true);
-                        copiedFiles++;
-                    }
-                    copiedFolders++;
-                }
-            }
-            finally
-            {
-                EditorUtility.ClearProgressBar();
-            }
-
-            AssetDatabase.Refresh();
-            ReapplyImportSettings();
-            WriteClipIndex();
-            Debug.Log($"[Naiwa] 导入完成：{copiedFolders} 个文件夹从源目录同步，新复制 {copiedFiles} 个文件；{skipped} 个文件夹源目录里没有（沿用工程内的）");
-        }
 
         [MenuItem("Naiwa/重新应用素材导入设置", priority = 11)]
         public static void ReapplyImportSettings()
@@ -159,7 +101,7 @@ namespace Naiwa.EditorTools
                         if (issue != null) { badImport++; firstImportIssue = firstImportIssue ?? issue; }
                     }
 
-                    string kind = def == null ? "idle" : def.Unlock == UnlockMode.Default ? "默认" : "抽奖";
+                    string kind = def == null ? "idle" : def.Unlock == UnlockMode.Default ? "默认" : def.IsReborn ? "重生" : "抽奖";
                     string id = def?.Id ?? clip.Id;
                     if (frameCount == 0) { report.AppendLine($"  [错误] {form.Form} {kind} {id}：没有帧"); errors++; continue; }
                     if (badSize > 0) { report.AppendLine($"  [错误] {form.Form} {kind} {id}：{badSize} 帧尺寸不是 {expected}×{expected}（同一文件夹必须同尺寸）"); errors++; }
@@ -184,7 +126,7 @@ namespace Naiwa.EditorTools
             int lottery = all.Count(e => e.InLotteryPool);
             WriteClipIndex();
 
-            string header = $"[Naiwa] 校验内容：{content.Forms.Count} 个阶段，{all.Count} 个表情（默认 {all.Count(e => e.Unlock == UnlockMode.Default)}，抽奖 {lottery}），{errors} 个错误，{warnings} 个警告\n";
+            string header = $"[Naiwa] 校验内容：{content.Forms.Count} 个阶段，{all.Count} 个表情（默认 {all.Count(e => e.Unlock == UnlockMode.Default)}，抽奖 {lottery}，重生 {all.Count(e => e.IsReborn)}），{errors} 个错误，{warnings} 个警告\n";
             if (errors > 0) Debug.LogError(header + report);
             else if (warnings > 0) Debug.LogWarning(header + report);
             else Debug.Log(header + report);

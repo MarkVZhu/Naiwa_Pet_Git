@@ -146,11 +146,26 @@ namespace Naiwa.Growth
         /// 调试「设为某阶段」（v1.0 §6.6）：growth = 该形态阈值，HighestForm = 该形态（允许降级），
         /// 显示形态通过一次切换过场变过去。正在过场时拒绝。
         /// </summary>
-        public bool DebugSetForm(FormId form)
+        public bool DebugSetForm(FormId form) => DebugSetForm(form, _growth.ThresholdOf(form));
+
+        /// <summary>调试：同上，但指定成长值（例如直接设为「大奶蛙[可重生]」）。</summary>
+        public bool DebugSetForm(FormId form, long growth)
         {
             if (IsTransitioning) return false;
-            _growth.ForceState(form, _growth.ThresholdOf(form));
+            _growth.ForceState(form, growth);
             _pendingSwitch = form != DisplayForm ? form : (FormId?)null;
+            return true;
+        }
+
+        /// <summary>
+        /// v2.0 重生：必须处于「大奶蛙[可重生]」且没有过场。成长值归零、HighestForm 回到奶蛋，
+        /// 显示形态通过一次切换过场（烟雾）变成奶蛋。点击量与奖励表情由调用方处理。
+        /// </summary>
+        public bool Reborn()
+        {
+            if (IsTransitioning || !_growth.CanReborn) return false;
+            _growth.ForceState(FormId.Egg, 0);
+            _pendingSwitch = DisplayForm != FormId.Egg ? FormId.Egg : (FormId?)null;
             return true;
         }
 

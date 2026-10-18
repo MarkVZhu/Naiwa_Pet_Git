@@ -3,7 +3,7 @@ using System.Collections.Generic;
 
 namespace Naiwa.Content
 {
-    public enum UnlockSource { Default, Lottery, Debug }
+    public enum UnlockSource { Default, Lottery, Debug, Reborn }
 
     public interface IUnlockService
     {

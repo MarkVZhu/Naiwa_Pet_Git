@@ -17,6 +17,14 @@
             "manual": true
         },
         {
+            "folder": "small_grass",
+            "ppu": 100.0,
+            "pivotX": 0.5,
+            "pivotY": 0.03167000040411949,
+            "canvasPx": 600,
+            "manual": true
+        },
+        {
             "folder": "small_icecream",
             "ppu": 100.0,
             "pivotX": 0.4966700077056885,

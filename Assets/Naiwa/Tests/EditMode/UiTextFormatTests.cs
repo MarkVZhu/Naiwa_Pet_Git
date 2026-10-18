@@ -46,8 +46,8 @@ namespace Naiwa.Tests
         public void PoolEmpty()
         {
             var s = S(LotteryState.PoolEmpty);
-            Assert.AreEqual("已全部收集", UiTextFormat.MenuLine(s));
-            Assert.AreEqual("所有表情都收集齐了！", UiTextFormat.CollectionLine1(s));
+            Assert.AreEqual("抽奖表情已全部收集", UiTextFormat.MenuLine(s));
+            Assert.AreEqual("抽奖表情都收集齐了！", UiTextFormat.CollectionLine1(s));
             Assert.AreEqual("以后新增的表情会自动进入抽奖池", UiTextFormat.CollectionLine2(s));
         }
 

@@ -57,6 +57,7 @@ namespace Naiwa.UI
         public NewBadge Badge { get; private set; }
         public CollectionPanel Collection { get; private set; }
         public SizePanel Size { get; private set; }
+        public ConfirmPanel Confirm { get; private set; }
         public UiKit Kit => _kit;
 
         CanvasScaler _scaler;
@@ -119,6 +120,9 @@ namespace Naiwa.UI
             Size = UiKit.Rect("SizePanel", _root).gameObject.AddComponent<SizePanel>();
             Size.Build(_kit, win.scaleMin, win.scaleMax, win.ClampScale);
 
+            Confirm = UiKit.Rect("ConfirmPanel", _root).gameObject.AddComponent<ConfirmPanel>();
+            Confirm.Build(_kit);
+
             ApplyLayout(true);
         }
 
@@ -133,8 +137,25 @@ namespace Naiwa.UI
             var win = _cfg.window;
             float preview = canvasPreview > 0f ? canvasPreview : 1f;
             _scaler.referenceResolution = new Vector2(win.WindowWidthPx / preview, win.WindowHeightPx / preview);
-            float fit = Mathf.Min(1f, _displayScale * win.sideWidthPx / (SizePanel.Width + 20f));
-            Size.transform.localScale = Vector3.one * (fit / _displayScale);
+            KeepReadable(Size.transform, SizePanel.Width);
+            KeepReadable(Confirm.transform, ConfirmPanel.Width);
+        }
+
+        /// <summary>弹出面板抵消全局缩放、保持接近原始大小；侧区放不下时再按比例缩小。</summary>
+        void KeepReadable(Transform panel, float width)
+        {
+            float fit = Mathf.Min(1f, _displayScale * _cfg.window.sideWidthPx / (width + 20f));
+            panel.localScale = Vector3.one * (fit / _displayScale);
+        }
+
+        /// <summary>直接跳到新的点击量，不播扣费滚动和「-n」（重生归零用）。</summary>
+        public void SnapClicks(long balance, bool paused)
+        {
+            _clicksTarget = -1;
+            _rollT = -1f;
+            _floatT = -1f;
+            _floatText.gameObject.SetActive(false);
+            SetClicks(balance, paused);
         }
 
         void BuildClicks()
@@ -256,6 +277,8 @@ namespace Naiwa.UI
             trt.anchoredPosition = new Vector2(sign * (win.PetAreaPx / 2f + 10f + _cfg.hud.toastWidthPx / 2f), petCenterY);
             var srt = (RectTransform)Size.transform;
             srt.anchoredPosition = new Vector2(sign * (win.PetAreaPx / 2f + win.sideWidthPx / 2f), petCenterY);
+            var cfrt = (RectTransform)Confirm.transform;
+            cfrt.anchoredPosition = new Vector2(sign * (win.PetAreaPx / 2f + win.sideWidthPx / 2f), petCenterY);
         }
 
         // ---------- 每帧 ----------

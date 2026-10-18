@@ -38,6 +38,8 @@ namespace Naiwa.Save
         public bool hudShowGrowth = true;
         /// <summary>全局缩放（右键菜单「调整大小」）。旧存档没有该字段 = 1。windowX/windowY 是缩放后窗口的位置。</summary>
         public float displayScale = 1f;
+        /// <summary>v2.0 已重生次数（统计用）。旧存档没有该字段 = 0。</summary>
+        public int rebornCount;
 
         /// <summary>v1（v0.1）的计数框开关，只用于迁移。</summary>
         public bool showCounter = true;

@@ -6,7 +6,10 @@ using UnityEngine;
 
 namespace Naiwa.Content
 {
-    public enum UnlockMode { Default, Lottery }
+    /// <summary>
+    /// Default = 启动即解锁；Lottery = 抽奖获得；Reborn = 每次重生获得一个（按 lotteryWeight 从大到小，同权重随机）。
+    /// </summary>
+    public enum UnlockMode { Default, Lottery, Reborn }
 
     /// <summary>一段序列帧的定义。</summary>
     public sealed class ClipDef
@@ -36,6 +39,8 @@ namespace Naiwa.Content
 
         public string Folder => Clip.Folder;
         public bool InLotteryPool => Unlock == UnlockMode.Lottery && LotteryWeight > 0;
+        /// <summary>重生表情：不进抽奖池；lotteryWeight 表示重生时获得的优先级（大的先得）。</summary>
+        public bool IsReborn => Unlock == UnlockMode.Reborn;
 
         public override string ToString() => Id;
     }

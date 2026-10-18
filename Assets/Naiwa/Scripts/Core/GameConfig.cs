@@ -44,6 +44,7 @@ namespace Naiwa.Core
 
             if (growth.eggToSmall <= 0) { warn?.Invoke("growth.eggToSmall 非法，使用默认值"); growth.eggToSmall = d.growth.eggToSmall; }
             if (growth.smallToBig <= growth.eggToSmall) { warn?.Invoke("growth.smallToBig 必须大于 eggToSmall，使用默认值"); growth.smallToBig = Math.Max(d.growth.smallToBig, growth.eggToSmall + 1); }
+            if (growth.rebornGrowth <= growth.smallToBig) { warn?.Invoke("growth.rebornGrowth 必须大于 smallToBig，使用默认值"); growth.rebornGrowth = Math.Max(d.growth.rebornGrowth, growth.smallToBig + 1); }
             if (input.maxCountPerSecond <= 0) input.maxCountPerSecond = d.input.maxCountPerSecond;
             if (pet.emoteFadeSec < 0f) pet.emoteFadeSec = d.pet.emoteFadeSec;
             if (pet.dragThresholdPx < 1) pet.dragThresholdPx = d.pet.dragThresholdPx;
@@ -121,6 +122,8 @@ namespace Naiwa.Core
     {
         public int eggToSmall = 5000;   // [R] v1.0 §4.5 用户定稿
         public int smallToBig = 12000;  // [R] v1.0 §4.5 用户定稿
+        /// <summary>[R] v2.0：大奶蛙的成长值达到它进入「大奶蛙[可重生]」，右键菜单出现「重生」。必须大于 smallToBig。</summary>
+        public int rebornGrowth = 15000;
     }
 
     [Serializable]
@@ -356,8 +359,6 @@ namespace Naiwa.Core
     [Serializable]
     public sealed class ContentPathsConfig
     {
-        /// <summary>仅编辑器导入用。</summary>
-        public string sourceDir = @"D:\Workbuddy_Workplace\桌宠奶蛙\GameResource";
         /// <summary>序列帧所在的 Resources 相对路径（对应 Assets/Resources/AnimationImages）。</summary>
         public string clipsResourcePath = "AnimationImages";
         /// <summary>v1.0 内容配置，相对 StreamingAssets。</summary>

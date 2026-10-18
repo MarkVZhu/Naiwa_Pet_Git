@@ -38,6 +38,15 @@ namespace Naiwa.Economy
             return true;
         }
 
+        /// <summary>重生：余额归零（累计获得 / 消耗只是统计，保留）。</summary>
+        public void ResetBalance()
+        {
+            if (Balance == 0) return;
+            long old = Balance;
+            Balance = 0;
+            Changed?.Invoke(old, Balance);
+        }
+
         static long SafeAdd(long a, long b) => a > long.MaxValue - b ? long.MaxValue : a + b;
     }
 }
