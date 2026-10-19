@@ -12,6 +12,10 @@ namespace Naiwa.Save
         public const int CurrentVersion = 2;
         /// <summary>windowX/windowY 未设置时的哨兵值（首次启动放右下角）。</summary>
         public const int NoPosition = int.MinValue;
+        
+        /// <summary>作者水印：每次存档都会写进 save.json。</summary>
+        public const string AuthorWatermark = "MZ";
+        public string author = AuthorWatermark;
 
         public int version = CurrentVersion;
         public long growth;
@@ -142,6 +146,7 @@ namespace Naiwa.Save
             {
                 Directory.CreateDirectory(_dir);
                 data.version = SaveDataLite.CurrentVersion;
+                data.author = SaveDataLite.AuthorWatermark;
                 if (data.unlockedEmotes == null) data.unlockedEmotes = new List<string>();
                 File.WriteAllText(TempPath, JsonUtility.ToJson(data, true));
 

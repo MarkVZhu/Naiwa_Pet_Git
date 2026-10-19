@@ -7,12 +7,16 @@ namespace Naiwa.UI
     /// <summary>
     /// 图鉴格子（v1.0 §8.3）：Playable 悬停描边变黄 + 中央播放三角，点击请求播放；
     /// ViewOnly 悬停 / 点击都没有任何变化；Locked 显示黑色剪影 + 右下角锁，名字 ？？？。
-    /// v2.0 重生表情：边框始终为红色；未解锁时整个方框被灰黑色覆盖、中间一个问号（不显示剪影），解锁后正常显示。
+    /// v2.0 重生表情：边框始终为红色；未解锁时整个方框被灰黑色覆盖、中间一个问号、下面一行「重生获取」（不显示剪影），解锁后正常显示。
     /// </summary>
     public sealed class CollectionSlotView : MonoBehaviour
     {
         const float RevealSec = 0.6f;
         const float RebornOutlinePx = 2.5f;
+        /// <summary>重生表情未解锁时，问号下面那一行小字。</summary>
+        const string RebornHint = "重生获取";
+        /// <summary>问号相对覆盖区中心上移的像素（越大越靠上）。</summary>
+        const float QuestionLiftPx = 10f;
 
         Image _bg;
         Sprite _normalBg, _rebornBg;
@@ -23,6 +27,7 @@ namespace Naiwa.UI
         Image _play;
         Image _cover;
         Text _question;
+        Text _hint;
         Text _name;
         UiClickable _click;
         SlotModel _model;
@@ -61,8 +66,12 @@ namespace Naiwa.UI
             _cover = kit.Image("RebornCover", _bg.transform, kit.Rounded(10, 0, coverColor, coverColor), new Color(1, 1, 1, 0.94f), sliced: true);
             UiKit.Stretch(_cover.rectTransform, RebornOutlinePx, RebornOutlinePx, RebornOutlinePx, RebornOutlinePx);
             _question = kit.Text("Question", _cover.transform, "?", Mathf.RoundToInt(slotPx * 0.46f), UiKit.Hex("#D9D2CC", Color.white), bold: true);
-            UiKit.Stretch(_question.rectTransform);
-            _cover.enabled = _question.enabled = false;
+            // 问号往上挪一点，给下面「重生获取」留出位置（Stretch 会让它正居中）
+            UiKit.Place(_question.rectTransform, 0, QuestionLiftPx, slotPx - RebornOutlinePx * 4, slotPx * 0.46f + 8);
+            // 问号下面一行小字
+            _hint = kit.Text("Hint", _cover.transform, RebornHint, 11, UiKit.Hex("#D9D2CC", Color.white));
+            UiKit.Place(_hint.rectTransform, 0, -slotPx / 2f + RebornOutlinePx * 2 + 15, slotPx - RebornOutlinePx * 4, 18);
+            _cover.enabled = _question.enabled = _hint.enabled = false;
 
             _hoverFrame = kit.Image("Hover", _bg.transform, kit.Rounded(12, 3f, new Color(1, 1, 1, 0), UiKit.Hex("#F2B92B", Color.yellow)), Color.white, sliced: true);
             UiKit.Stretch(_hoverFrame.rectTransform);
@@ -93,9 +102,10 @@ namespace Naiwa.UI
             _silhouette.enabled = locked && !reborn && icon != null;
             SetAlpha(_color, 1f);
             SetAlpha(_silhouette, 1f);
-            _cover.enabled = _question.enabled = locked && reborn;
+            _cover.enabled = _question.enabled = _hint.enabled = locked && reborn;
             SetAlpha(_cover, 0.94f);
             SetAlpha(_question, 1f);
+            SetAlpha(_hint, 1f);
             _lock.enabled = locked && !reborn;
             _lock.rectTransform.localScale = Vector3.one;
             _name.text = model.Name;
@@ -114,9 +124,10 @@ namespace Naiwa.UI
             SetAlpha(_color, 0f);
             if (_revealReborn)
             {
-                _cover.enabled = _question.enabled = true;
+                _cover.enabled = _question.enabled = _hint.enabled = true;
                 SetAlpha(_cover, 0.94f);
                 SetAlpha(_question, 1f);
+                SetAlpha(_hint, 1f);
                 return;
             }
             _silhouette.enabled = _silhouette.sprite != null;
@@ -134,6 +145,7 @@ namespace Naiwa.UI
             {
                 SetAlpha(_cover, 0.94f * (1f - k));
                 SetAlpha(_question, 1f - k);
+                SetAlpha(_hint, 1f - k);
                 _question.rectTransform.localScale = Vector3.one * (1f + 0.3f * UiKit.EaseOutCubic(k));
             }
             else
@@ -147,7 +159,7 @@ namespace Naiwa.UI
                 _silhouette.enabled = false;
                 _lock.enabled = false;
                 _lock.rectTransform.localScale = Vector3.one;
-                _cover.enabled = _question.enabled = false;
+                _cover.enabled = _question.enabled = _hint.enabled = false;
                 _question.rectTransform.localScale = Vector3.one;
             }
         }

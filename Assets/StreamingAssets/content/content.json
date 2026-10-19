@@ -7,11 +7,12 @@
       "emotes": [
         { "id": "egg_drink", "displayName": "干一杯",     "folder": "egg_emo_drink", "fps": 24, "unlock": "Default", "icon": "icons/egg_drink.png" },
         { "id": "egg_bath",  "displayName": "泡个澡",     "folder": "egg_emo_bath",  "fps": 24, "unlock": "Default", "icon": "icons/egg_bath.png" },
-        { "id": "egg_sleep", "displayName": "睡个好觉",   "folder": "egg_sleep",     "fps": 24, "unlock": "Lottery", "lotteryWeight": 3, "icon": "icons/egg_sleep.png" },
-        { "id": "egg_think", "displayName": "奶蛙上脑", "folder": "egg_think",     "fps": 24, "unlock": "Lottery", "lotteryWeight": 3, "icon": "icons/egg_think.png" },
-        { "id": "egg_crack", "displayName": "我裂开了", "folder": "egg_crack",     "fps": 24, "unlock": "Lottery", "lotteryWeight": 3, "icon": "icons/egg_crack.png" },
-        { "id": "egg_angel", "displayName": "蛋蛋天使", "folder": "egg_angel",     "fps": 24, "unlock": "Reborn", "lotteryWeight": 3, "icon": "icons/egg_angel.png" }
-        
+        { "id": "egg_sleep", "displayName": "睡个好觉",   "folder": "egg_sleep",     "fps": 24, "unlock": "Lottery", "lotteryWeight": 5, "icon": "icons/egg_sleep.png" },
+        { "id": "egg_think", "displayName": "奶蛙上脑", "folder": "egg_think",     "fps": 24, "unlock": "Lottery", "lotteryWeight": 5, "icon": "icons/egg_think.png" },
+        { "id": "egg_crack", "displayName": "我裂开了", "folder": "egg_crack",     "fps": 24, "unlock": "Lottery", "lotteryWeight": 5, "icon": "icons/egg_crack.png" },
+        { "id": "egg_milk", "displayName": "野生蛋奶",  "folder": "egg_milk",      "fps": 24, "unlock": "Lottery", "lotteryWeight": 5, "icon": "icons/egg_milk.png" },
+        { "id": "egg_naidou", "displayName": "奶豆出没", "folder": "egg_naidou",     "fps": 24, "unlock": "Lottery", "lotteryWeight": 5, "icon": "icons/egg_naidou.png" },
+        { "id": "egg_angel", "displayName": "蛋蛋天使！", "folder": "egg_angel",     "fps": 24, "unlock": "Reborn", "lotteryWeight": 5, "icon": "icons/egg_angel.png" } 
       ]
     },
     {
@@ -19,11 +20,13 @@
       "idle": { "folder": "small_idle", "fps": 24 },
       "emotes": [
         { "id": "small_heart",    "displayName": "比心",     "folder": "small_heart",    "fps": 24, "unlock": "Default", "icon": "icons/small_heart.png" },
-        { "id": "small_armcross", "displayName": "抱臂摇摆", "folder": "small_armcross", "fps": 24, "unlock": "Lottery", "lotteryWeight": 2, "icon": "icons/small_armcross.png" },
-        { "id": "small_cat",      "displayName": "变身猫猫", "folder": "small_cat",      "fps": 24, "unlock": "Lottery", "lotteryWeight": 2, "icon": "icons/small_cat.png" },
-        { "id": "small_icecream", "displayName": "吃冰淇淋", "folder": "small_icecream", "fps": 24, "unlock": "Lottery", "lotteryWeight": 2, "icon": "icons/small_icecream.png" },
-        { "id": "small_grass", "displayName": "狗尾巴草", "folder": "small_grass", "fps": 24, "unlock": "Lottery", "lotteryWeight": 2, "icon": "icons/small_grass.png" },
-        { "id": "small_cupid", "displayName": "丘比特", "folder": "small_cupid", "fps": 24, "unlock": "Reborn", "lotteryWeight": 2, "icon": "icons/small_cupid.png" }
+        { "id": "small_armcross", "displayName": "抱臂摇摆", "folder": "small_armcross", "fps": 24, "unlock": "Lottery", "lotteryWeight": 3, "icon": "icons/small_armcross.png" },
+        { "id": "small_cat",      "displayName": "变身奶猫", "folder": "small_cat",      "fps": 24, "unlock": "Lottery", "lotteryWeight": 3, "icon": "icons/small_cat.png" },
+        { "id": "small_chicken",  "displayName": "变身奶鸡", "folder": "small_chicken",  "fps": 24, "unlock": "Lottery", "lotteryWeight": 3, "icon": "icons/small_chicken.png" },
+        { "id": "small_flag",     "displayName": "奶家人", "folder": "small_flag", "fps": 24, "unlock": "Lottery", "lotteryWeight": 3, "icon": "icons/small_flag.png" },
+        { "id": "small_icecream", "displayName": "吃冰淇淋", "folder": "small_icecream", "fps": 24, "unlock": "Lottery", "lotteryWeight": 3, "icon": "icons/small_icecream.png" },
+        { "id": "small_grass", "displayName": "狗尾巴草", "folder": "small_grass", "fps": 24, "unlock": "Lottery", "lotteryWeight": 3, "icon": "icons/small_grass.png" },
+        { "id": "small_cupid", "displayName": "丘比特！", "folder": "small_cupid", "fps": 24, "unlock": "Reborn", "lotteryWeight": 3, "icon": "icons/small_cupid.png" }
       ]
     },
     {
@@ -36,6 +39,8 @@
         { "id": "big_look",   "displayName": "回头看看",   "folder": "big_look",      "fps": 24, "unlock": "Lottery", "lotteryWeight": 1, "icon": "icons/big_look.png" },
         { "id": "big_shit",   "displayName": "便便出没",   "folder": "big_shit",      "fps": 24, "unlock": "Lottery", "lotteryWeight": 1, "icon": "icons/big_shit.png" },
         { "id": "big_box",   "displayName": "东南亚拳王",   "folder": "big_box",      "fps": 24, "unlock": "Lottery", "lotteryWeight": 1, "icon": "icons/big_box.png" },
+        { "id": "big_handstand",   "displayName": "贝优奶塔",   "folder": "big_handstand",      "fps": 24, "unlock": "Lottery", "lotteryWeight": 1, "icon": "icons/big_handstand.png" },
+        { "id": "big_dance",   "displayName": "这就是街舞",   "folder": "big_dance",      "fps": 24, "unlock": "Lottery", "lotteryWeight": 1, "icon": "icons/big_dance.png" },
         { "id": "big_god",   "displayName": "登神！",   "folder": "big_god",      "fps": 20, "unlock": "Reborn", "lotteryWeight": 1, "icon": "icons/big_god.png" }   
       ]
     }
