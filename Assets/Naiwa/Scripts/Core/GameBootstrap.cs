@@ -146,7 +146,7 @@ namespace Naiwa.Core
             _wallet.Changed += (_, __) => _lotteryDirty = true;
             _lottery = new LotteryService(_wallet, _catalog, _unlocks, _rng, () => _forms.DisplayForm, SaveNow,
                 _config.lottery.cost, _config.lottery.Cooldown, _config.lottery.Scope,
-                _save.lotteryNextAvailableUnixMs, _save.lotteryDrawCount);
+                _save.lotteryNextAvailableUnixMs, _save.lotteryDrawCount, _config.lottery.formPreferenceWeight);
 
             // ---- Input ----
             _filter = new InputFilterLite(_config.input.maxCountPerSecond, _config.input.ignoreInjected)

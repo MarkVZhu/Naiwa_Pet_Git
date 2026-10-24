@@ -68,6 +68,7 @@ namespace Naiwa.Core
             if (hud.growthBarHeightPx < 2) hud.growthBarHeightPx = d.hud.growthBarHeightPx;
             if (lottery.cost < 1) { warn?.Invoke("lottery.cost 必须 ≥ 1，使用默认值"); lottery.cost = d.lottery.cost; }
             if (lottery.cooldownMinutes < 0f) lottery.cooldownMinutes = d.lottery.cooldownMinutes;
+            if (lottery.formPreferenceWeight < 0) { warn?.Invoke("lottery.formPreferenceWeight 不能为负，使用默认值"); lottery.formPreferenceWeight = d.lottery.formPreferenceWeight; }
             if (lottery.spinSec < 0.1f) lottery.spinSec = d.lottery.spinSec;
             if (lottery.spinTurns < 0) lottery.spinTurns = d.lottery.spinTurns;
             if (lottery.revealToastSec < 0.5f) lottery.revealToastSec = d.lottery.revealToastSec;
@@ -226,6 +227,11 @@ namespace Naiwa.Core
         public int cost = 2000;                    // [P]
         public float cooldownMinutes = 30f;        // [P]
         public string poolScope = nameof(LotteryPoolScope.All); // [A]
+        /// <summary>
+        /// [A] 状态偏好权重（全局一个参数）：抽奖时，属于玩家「当前显示形态」的表情在自己的 lotteryWeight 上再加这么多权重，
+        /// 让玩家更容易抽到自己此刻所在状态的表情。0 = 不偏向。改这里的默认值，或在 game_config.json 的 lottery 段里写 formPreferenceWeight。
+        /// </summary>
+        public int formPreferenceWeight = 2;
         public float spinSec = 1.2f;               // [P]
         public int spinTurns = 3;                  // [P]
         public float bubbleWobbleIntervalSec = 2.5f; // [P]

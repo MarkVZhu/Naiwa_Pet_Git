@@ -61,6 +61,12 @@ namespace Naiwa.Economy
         public int Cost { get; set; }
         public TimeSpan Cooldown { get; set; }
         public LotteryPoolScope Scope { get; set; }
+        /// <summary>
+        /// 状态偏好权重（全局一个参数）：抽奖时，属于玩家「当前显示形态」的表情在自己 lotteryWeight 的基础上再加这么多权重。
+        /// 看的是当前显示的形态，不是已解锁的最高形态（解锁了大奶蛙但手动切回小奶蛙，加的是小奶蛙的）。0 = 不偏向。
+        /// 默认值与配置项在 GameConfig.cs 的 LotteryConfig.formPreferenceWeight。
+        /// </summary>
+        public int FormPreferenceWeight { get; set; }
         /// <summary>DateTime.MinValue = 已就绪。</summary>
         public DateTime NextAvailableUtc { get; private set; }
         public int DrawCount { get; private set; }
@@ -69,7 +75,7 @@ namespace Naiwa.Economy
 
         public LotteryService(ClickWallet wallet, EmoteCatalog catalog, UnlockService unlocks, IRandom rng,
             Func<FormId> currentForm, Action saveNow, int cost, TimeSpan cooldown, LotteryPoolScope scope,
-            long nextAvailableUnixMs = 0, int drawCount = 0)
+            long nextAvailableUnixMs = 0, int drawCount = 0, int formPreferenceWeight = 0)
         {
             _wallet = wallet;
             _catalog = catalog;
@@ -80,6 +86,7 @@ namespace Naiwa.Economy
             Cost = Math.Max(1, cost);
             Cooldown = cooldown < TimeSpan.Zero ? TimeSpan.Zero : cooldown;
             Scope = scope;
+            FormPreferenceWeight = Math.Max(0, formPreferenceWeight);
             NextAvailableUtc = FromUnixMs(nextAvailableUnixMs);
             DrawCount = Math.Max(0, drawCount);
         }
@@ -171,18 +178,22 @@ namespace Naiwa.Economy
             return left;
         }
 
+        /// <summary>某个表情这次抽奖的实际权重 = 配置的 lotteryWeight，当前显示形态的表情再加状态偏好权重。</summary>
+        public int EffectiveWeight(EmoteDef e) =>
+            e.LotteryWeight + (e.Form == _currentForm() ? FormPreferenceWeight : 0);
+
         EmoteDef PickWeighted(List<EmoteDef> pool)
         {
             if (pool.Count == 0) return null;
             long total = 0;
-            foreach (var e in pool) total += e.LotteryWeight;
+            foreach (var e in pool) total += EffectiveWeight(e);
             if (total <= 0) return null;
 
             int r = _rng.Next((int)Math.Min(total, int.MaxValue));
             long acc = 0;
             foreach (var e in pool)
             {
-                acc += e.LotteryWeight;
+                acc += EffectiveWeight(e);
                 if (r < acc) return e;
             }
             return pool[pool.Count - 1];
